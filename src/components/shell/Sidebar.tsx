@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {!collapsed && (
                             <div className="flex-1 min-w-0 transition-opacity duration-200 mr-2">
                                 <p className="text-sm font-medium text-white truncate">Alex Johnson</p>
-                                <p className="text-xs text-neutral-muted truncate">Sunrise Properties</p>
+                                <p className="text-xs text-sidebar-muted truncate">Sunrise Properties</p>
                             </div>
                         )}
 
