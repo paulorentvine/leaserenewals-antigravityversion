@@ -11,21 +11,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'defaul
     const config = RENEWAL_STATUS_CONFIG[status] || { label: status, color: 'gray' };
 
     const colorMap: Record<string, string> = {
-        orange: 'bg-orange-100 text-orange-800 border-orange-200',
-        blue: 'bg-blue-100   text-blue-800   border-blue-200',
-        amber: 'bg-amber-100  text-amber-800  border-amber-200',
-        green: 'bg-green-100  text-green-800  border-green-200',
-        gray: 'bg-gray-100   text-gray-600   border-gray-200',
-        red: 'bg-red-100    text-red-800    border-red-200',
+        orange: 'bg-orange-surface text-orange border-orange-border',
+        blue: 'bg-info-surface text-info border-info-border',
+        amber: 'bg-amber-surface text-amber border-amber-border',
+        green: 'bg-success-surface text-success border-success-border',
+        gray: 'bg-gray-100 text-neutral-muted border-border',
+        red: 'bg-error-surface text-error border-error-border',
     };
 
     const dotColorMap: Record<string, string> = {
-        orange: 'bg-orange-500',
-        blue: 'bg-blue-500',
-        amber: 'bg-amber-500',
-        green: 'bg-green-500',
-        gray: 'bg-gray-400',
-        red: 'bg-red-500',
+        orange: 'bg-orange',
+        blue: 'bg-info',
+        amber: 'bg-amber',
+        green: 'bg-success',
+        gray: 'bg-neutral-muted',
+        red: 'bg-error',
     };
 
     const colors = colorMap[config.color] || colorMap.gray;

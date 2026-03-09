@@ -30,10 +30,10 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
     return (
         <tr
             className={`
-        hover:bg-gray-50/50 transition-colors duration-100 border-b border-gray-100 group
-        ${isSelected ? 'bg-blue-50/40' : ''}
-        ${requiresAttention ? 'border-l-2 border-l-red-400' : ''}
-        ${renewal.isDirty ? 'border-l-2 border-l-amber-400' : ''}
+        hover:bg-gray-50/50 transition-colors duration-100 border-b border-border group
+        ${isSelected ? 'bg-brand-surface' : ''}
+        ${requiresAttention ? 'border-l-2 border-l-error' : ''}
+        ${renewal.isDirty ? 'border-l-2 border-l-warning' : ''}
       `}
         >
             {/* 1. Checkbox */}
@@ -50,15 +50,15 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
             {/* 2. Unit / Address */}
             <td className="py-3 px-3 min-w-[200px]">
                 <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900 truncate">
+                    <span className="text-sm font-medium text-neutral truncate">
                         {renewal.property.unitNumber ? `Unit ${renewal.property.unitNumber} · ` : ''}
                         {renewal.property.address}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-neutral-muted">
                         {renewal.property.city}, {renewal.property.state}
                     </span>
                     <div className="mt-1 flex">
-                        <span className="inline-flex items-center bg-gray-100 rounded px-1.5 py-px text-[10px] text-gray-500 font-medium">
+                        <span className="inline-flex items-center bg-gray-100 rounded px-1.5 py-px text-[10px] text-neutral-muted font-medium">
                             {renewal.property.portfolioName}
                         </span>
                     </div>
@@ -68,26 +68,26 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
             {/* 3. Tenant */}
             <td className="py-3 px-3 min-w-[160px]">
                 <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900 truncate">
+                    <span className="text-sm font-medium text-neutral truncate">
                         {renewal.tenant.firstName} {renewal.tenant.lastName}
                     </span>
-                    <span className="text-xs text-gray-400 truncate max-w-[160px]">
+                    <span className="text-xs text-neutral-muted truncate max-w-[160px]">
                         {renewal.tenant.email}
                     </span>
                 </div>
             </td>
 
             {/* 4. Current Rent */}
-            <td className="py-3 px-3 min-w-[120px] text-right font-mono text-sm text-gray-900">
+            <td className="py-3 px-3 min-w-[120px] text-right font-mono text-sm text-neutral">
                 {formatCurrency(renewal.currentRent)}
             </td>
 
             {/* 5. New Rent (Editable Hint) */}
             <td
-                className="py-3 px-3 min-w-[120px] text-right bg-green-50/60 transition-colors"
+                className="py-3 px-3 min-w-[120px] text-right bg-brand-surface transition-colors"
                 title="Click to edit (available in next update)"
             >
-                <div className="inline-block border-b border-dashed border-green-300 font-mono text-sm text-gray-900 cursor-default">
+                <div className="inline-block border-b border-dashed border-success-border font-mono text-sm text-neutral cursor-default">
                     {formatCurrency(renewal.proposedRent)}
                 </div>
             </td>
@@ -95,17 +95,17 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
             {/* 6. % Change */}
             <td className="py-3 px-3 min-w-[100px] text-right">
                 {pct > 0 ? (
-                    <span className="text-sm font-semibold text-green-700">{formatPercent(pct, true)}</span>
+                    <span className="text-sm font-semibold text-success">{formatPercent(pct, true)}</span>
                 ) : pct < 0 ? (
-                    <span className="text-sm font-semibold text-red-600">{formatPercent(pct, true)}</span>
+                    <span className="text-sm font-semibold text-error">{formatPercent(pct, true)}</span>
                 ) : (
-                    <span className="text-sm text-gray-400">—</span>
+                    <span className="text-sm text-neutral-muted">—</span>
                 )}
             </td>
 
             {/* 7. Lease End */}
             <td className="py-3 px-3 min-w-[120px] text-sm">
-                <div className={`flex items-center gap-1 ${isEndingSoon ? 'text-amber-700 font-semibold' : 'text-gray-700'}`}>
+                <div className={`flex items-center gap-1 ${isEndingSoon ? 'text-warning font-semibold' : 'text-neutral'}`}>
                     <span>{formatLeaseEndDate(renewal.leaseEndDate)}</span>
                     {isEndingSoon && <CalendarClock size={12} className="shrink-0" />}
                 </div>
@@ -117,8 +117,8 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
                 title="Click to edit (available in next update)"
             >
                 <div className={`
-          inline-block border-b border-dashed border-green-300 transition-colors
-          ${renewal.proposedTerm === 'month_to_month' ? 'text-amber-700 font-semibold' : 'text-gray-700'}
+          inline-block border-b border-dashed border-success-border transition-colors
+          ${renewal.proposedTerm === 'month_to_month' ? 'text-warning font-semibold' : 'text-neutral'}
         `}>
                     {termOption?.label || renewal.proposedTerm}
                 </div>
@@ -145,7 +145,7 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
             {/* 12. Actions */}
             <td className="w-10 py-3 px-1 text-center">
                 <button
-                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    className="p-1.5 rounded-md text-neutral-muted hover:text-neutral hover:bg-gray-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
                     aria-label="Row actions"
                     onClick={() => console.log('Row actions clicked', renewal.id)}
                 >

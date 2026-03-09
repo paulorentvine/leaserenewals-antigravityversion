@@ -23,13 +23,13 @@ export const PageTitleBar: React.FC<PageTitleBarProps> = ({
 
     return (
         <section
-            className="bg-white border-b border-black/[0.2] px-4 py-2 flex items-center justify-between min-h-[52px]"
+            className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between min-h-[52px]"
             aria-labelledby="page-title"
         >
             {/* Left: Title */}
             <h1
                 id="page-title"
-                className="text-xl lg:text-[28px] font-semibold text-gray-900 tracking-[-0.8px] leading-[34px] truncate max-w-[50%] lg:max-w-none"
+                className="text-xl lg:text-[28px] font-semibold text-neutral tracking-[-0.8px] leading-[34px] truncate max-w-[50%] lg:max-w-none"
             >
                 {title}
             </h1>

@@ -22,11 +22,11 @@ export const GridToolbar: React.FC<GridToolbarProps> = ({
             <div className="flex items-center gap-1.5 text-sm">
                 {selectedCount > 0 && (
                     <>
-                        <span className="font-semibold text-gray-900">{selectedCount} selected</span>
+                        <span className="font-semibold text-neutral">{selectedCount} selected</span>
                         <span className="text-gray-300">·</span>
                     </>
                 )}
-                <span className="text-gray-500">
+                <span className="text-neutral-muted">
                     {isFiltered
                         ? `Showing ${filteredCount} of ${totalCount} renewals`
                         : `Showing ${totalCount} renewals`}

@@ -48,8 +48,8 @@ export const RenewalTabs: React.FC<RenewalTabsProps> = ({ activeTab, onChange, c
                         className={`
               flex items-center whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 -mb-px outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)]
               ${isActive
-                                ? 'text-gray-900 border-gray-900'
-                                : 'text-gray-500 border-transparent hover:text-gray-700'}
+                                ? 'text-neutral border-primary'
+                                : 'text-neutral-muted border-transparent hover:text-neutral'}
               ${tab.id === 'settings' ? 'px-2' : ''}
             `}
                     >

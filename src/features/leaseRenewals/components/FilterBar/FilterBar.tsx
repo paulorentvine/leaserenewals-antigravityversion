@@ -56,13 +56,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <div className="flex flex-wrap items-center gap-2 px-4 py-3">
                 {/* Search */}
                 <div className="relative flex items-center w-full sm:w-auto sm:min-w-[280px] group">
-                    <Search size={14} className="absolute left-2.5 text-gray-400 group-focus-within:text-[var(--color-brand)] transition-colors" />
+                    <Search size={14} className="absolute left-2.5 text-neutral-muted group-focus-within:text-brand transition-colors" />
                     <input
                         type="text"
                         placeholder="Search by unit, tenant, or address..."
                         value={filters.search}
                         onChange={handleSearchChange}
-                        className="w-full rounded-[var(--radius-100)] border border-gray-200 bg-white pl-8 pr-8 py-1.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:ring-opacity-20 focus:border-[var(--color-brand)] transition-all"
+                        className="w-full rounded-[var(--radius-100)] border border-gray-200 bg-white pl-8 pr-8 py-1.5 text-sm text-neutral outline-none focus:ring-2 focus:ring-brand focus:ring-opacity-20 focus:border-brand transition-all"
                     />
                     {filters.search && (
                         <button

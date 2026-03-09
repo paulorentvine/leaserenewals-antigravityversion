@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </svg>
                         <span
                             className={`
-                text-white font-semibold text-sm tracking-tight transition-all duration-200 origin-left
+                text-brand font-semibold text-sm tracking-tight transition-all duration-200 origin-left
                 ${collapsed ? 'opacity-0 scale-x-0 w-0' : 'opacity-100 scale-x-100 w-auto ml-2'}
               `}
                         >
@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {!collapsed && (
                             <div className="flex-1 min-w-0 transition-opacity duration-200 mr-2">
                                 <p className="text-sm font-medium text-white truncate">Alex Johnson</p>
-                                <p className="text-xs text-gray-400 truncate">Sunrise Properties</p>
+                                <p className="text-xs text-neutral-muted truncate">Sunrise Properties</p>
                             </div>
                         )}
 

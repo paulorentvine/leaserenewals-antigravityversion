@@ -49,8 +49,8 @@ export const SetTermPopover: React.FC<SetTermPopoverProps> = ({
             ref={containerRef}
             className="absolute bottom-full mb-2 right-0 bg-white rounded-[var(--radius-150)] border border-gray-200 shadow-[var(--shadow-xl)] w-[240px] p-4 z-50 text-left animate-in fade-in slide-in-from-bottom-2 duration-150"
         >
-            <div className="text-sm font-semibold text-gray-900 mb-1">Set Lease Term</div>
-            <div className="text-xs text-gray-400 mb-3">
+            <div className="text-sm font-semibold text-neutral mb-1">Set Lease Term</div>
+            <div className="text-xs text-neutral-muted mb-3">
                 Apply to {selectedCount} selected renewal{selectedCount !== 1 ? 's' : ''}
             </div>
 
@@ -65,23 +65,23 @@ export const SetTermPopover: React.FC<SetTermPopoverProps> = ({
                             key={option.value}
                             onClick={() => onApply(option.value)}
                             className={`
-                w-full flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-100)] text-sm transition-colors duration-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]
-                ${showWarning ? 'text-amber-700 hover:bg-amber-50' : 'text-gray-700 hover:bg-gray-50'}
+                w-full flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-100)] text-sm transition-colors duration-100 outline-none focus-visible:ring-2 focus-visible:ring-brand
+                ${showWarning ? 'text-warning hover:bg-warning-surface' : 'text-neutral hover:bg-gray-50'}
               `}
                             title={isMTM && showWarning ? `${mtmForbiddenCount} selected renewal(s) have MTM disabled by policy` : undefined}
                         >
                             <div className="flex items-center gap-2">
                                 <span>{option.label}</span>
                                 {isCurrent && (
-                                    <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-px rounded-full font-medium">
+                                    <span className="bg-gray-100 text-neutral-muted text-[10px] px-1.5 py-px rounded-full font-medium">
                                         current
                                     </span>
                                 )}
                                 {showWarning && (
-                                    <AlertTriangle size={12} className="text-amber-500" />
+                                    <AlertTriangle size={12} className="text-warning" />
                                 )}
                             </div>
-                            {isCurrent && <Check size={14} className="text-[var(--color-brand)]" />}
+                            {isCurrent && <Check size={14} className="text-brand" />}
                         </button>
                     );
                 })}

@@ -68,22 +68,22 @@ export const ApplyIncreasePopover: React.FC<ApplyIncreasePopoverProps> = ({
             ref={containerRef}
             className="absolute bottom-full mb-2 left-0 bg-white rounded-[var(--radius-150)] border border-gray-200 shadow-[var(--shadow-xl)] w-[280px] p-4 z-50 text-left animate-in fade-in slide-in-from-bottom-2 duration-150"
         >
-            <div className="text-sm font-semibold text-gray-900 mb-1">Apply Rent Increase</div>
-            <div className="text-xs text-gray-400 mb-3">
+            <div className="text-sm font-semibold text-neutral mb-1">Apply Rent Increase</div>
+            <div className="text-xs text-neutral-muted mb-3">
                 Will be applied to {selectedCount} selected renewal{selectedCount !== 1 ? 's' : ''}
             </div>
 
             <div className="flex rounded-[var(--radius-075)] bg-gray-100 p-0.5 mb-4">
                 <button
                     onClick={() => setType('percent')}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-[var(--radius-050)] transition-all ${type === 'percent' ? 'bg-white text-gray-900 shadow-[var(--shadow-sm)]' : 'text-gray-500 hover:text-gray-700'
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-[var(--radius-050)] transition-all ${type === 'percent' ? 'bg-white text-neutral shadow-[var(--shadow-sm)]' : 'text-neutral-muted hover:text-neutral'
                         }`}
                 >
                     Percentage
                 </button>
                 <button
                     onClick={() => setType('flat')}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-[var(--radius-050)] transition-all ${type === 'flat' ? 'bg-white text-gray-900 shadow-[var(--shadow-sm)]' : 'text-gray-500 hover:text-gray-700'
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-[var(--radius-050)] transition-all ${type === 'flat' ? 'bg-white text-neutral shadow-[var(--shadow-sm)]' : 'text-neutral-muted hover:text-neutral'
                         }`}
                 >
                     Flat Amount
@@ -91,7 +91,7 @@ export const ApplyIncreasePopover: React.FC<ApplyIncreasePopoverProps> = ({
             </div>
 
             <div className="mb-4">
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+                <label className="block text-[10px] uppercase tracking-wider font-bold text-neutral-muted mb-1">
                     {type === 'percent' ? 'Percentage increase' : 'Fixed amount ($)'}
                 </label>
                 <div className="relative">
@@ -102,22 +102,22 @@ export const ApplyIncreasePopover: React.FC<ApplyIncreasePopoverProps> = ({
                         onChange={handleChange}
                         placeholder={type === 'percent' ? '0.0' : '0'}
                         className={`
-              w-full rounded-[var(--radius-100)] border py-2 text-sm text-gray-900 outline-none transition-all duration-150
+              w-full rounded-[var(--radius-100)] border py-2 text-sm text-neutral outline-none transition-all duration-150
               ${type === 'percent' ? 'pl-3 pr-8' : 'pl-7 pr-3'}
-              ${error ? 'border-red-300 focus:border-red-500 ring-red-50' : 'border-gray-200 focus:border-[var(--color-brand)] focus:ring-1 focus:ring-[var(--color-brand)]'}
+              ${error ? 'border-error-border focus:border-error ring-error-surface' : 'border-gray-200 focus:border-brand focus:ring-1 focus:ring-brand'}
             `}
                     />
                     {type === 'percent' ? (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">%</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-neutral-muted font-medium">%</span>
                     ) : (
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-muted font-medium">$</span>
                     )}
                 </div>
-                {error && <div className="text-[11px] text-red-500 mt-1 font-medium">{error}</div>}
+                {error && <div className="text-[11px] text-error mt-1 font-medium">{error}</div>}
             </div>
 
             {!error && value && !isNaN(parseFloat(value)) && (
-                <div className="bg-green-50 rounded-[var(--radius-075)] px-3 py-2 text-xs text-green-800 flex items-center gap-2">
+                <div className="bg-success-surface rounded-[var(--radius-075)] px-3 py-2 text-xs text-success flex items-center gap-2">
                     <TrendingUp size={14} className="shrink-0" />
                     <span>
                         {type === 'percent'
@@ -131,7 +131,7 @@ export const ApplyIncreasePopover: React.FC<ApplyIncreasePopoverProps> = ({
             <div className="flex gap-2 mt-4">
                 <button
                     onClick={onClose}
-                    className="flex-1 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-[var(--radius-100)] hover:bg-gray-50 transition-colors"
+                    className="flex-1 py-2 text-sm font-medium text-neutral-muted border border-gray-200 rounded-[var(--radius-100)] hover:bg-gray-50 transition-colors"
                 >
                     Cancel
                 </button>
@@ -141,8 +141,8 @@ export const ApplyIncreasePopover: React.FC<ApplyIncreasePopoverProps> = ({
                     className={`
             flex-1 py-2 text-sm font-medium rounded-[var(--radius-100)] transition-all
             ${!!error || !value
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]'}
+                            ? 'bg-gray-100 text-neutral-disabled cursor-not-allowed'
+                            : 'bg-primary text-white hover:bg-primary-hover'}
           `}
                 >
                     Apply

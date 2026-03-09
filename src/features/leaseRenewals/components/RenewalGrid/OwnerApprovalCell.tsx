@@ -28,13 +28,13 @@ export const OwnerApprovalCell: React.FC<OwnerApprovalCellProps> = ({ status }) 
     const Icon = getIcon(config.icon);
 
     const colorClasses: Record<string, string> = {
-        green: 'text-green-600',
-        gray: 'text-gray-400',
-        red: 'text-red-500',
-        silver: 'text-gray-300' // Using gray-300 for silver
+        green: 'text-success',
+        gray: 'text-neutral-muted',
+        red: 'text-error',
+        silver: 'text-gray-300'
     };
 
-    const colorClass = colorClasses[config.color] || 'text-gray-400';
+    const colorClass = colorClasses[config.color] || 'text-neutral-muted';
 
     return (
         <div className={`inline-flex items-center gap-1.5 text-sm ${colorClass}`}>

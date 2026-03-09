@@ -79,7 +79,7 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                                     key={col.key}
                                     style={{ width: col.minWidth, minWidth: col.minWidth }}
                                     className={`
-                    py-3 px-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap
+                    py-3 px-3 text-left text-xs font-semibold text-neutral-muted uppercase tracking-wider whitespace-nowrap
                     ${col.align === 'right' ? 'text-right' : ''}
                     ${col.align === 'center' ? 'text-center' : ''}
                     ${col.sticky ? 'sticky left-0 bg-gray-50 z-20 shadow-[1px_0_0_0_rgba(0,0,0,0.1)]' : ''}
@@ -91,17 +91,17 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                                             type="checkbox"
                                             checked={allSelected}
                                             onChange={(e) => handleSelectAll(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-[var(--color-brand)] focus:ring-[var(--color-brand)] focus:ring-opacity-25 transition-all cursor-pointer"
+                                            className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand focus:ring-opacity-25 transition-all cursor-pointer"
                                             aria-label="Select all renewals"
                                         />
                                     ) : col.sortable ? (
                                         <button
                                             onClick={() => handleToggleSort(col.key)}
                                             className={`
-                        inline-flex items-center gap-1.5 transition-colors
-                        ${isSorted ? 'text-gray-900' : 'hover:text-gray-700'}
-                        ${col.align === 'right' ? 'flex-row-reverse' : ''}
-                      `}
+                                                inline-flex items-center gap-1.5 transition-colors
+                                                ${isSorted ? 'text-neutral' : 'hover:text-neutral'}
+                                                ${col.align === 'right' ? 'flex-row-reverse' : ''}
+                                            `}
                                             aria-sort={isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                                         >
                                             <span>{col.label}</span>

@@ -15,7 +15,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
     return (
         <header
-            className="fixed top-0 left-0 right-0 h-[52px] z-30 bg-white border-b border-black/[0.2] px-4 flex items-center gap-3"
+            className="fixed top-0 left-0 right-0 h-[52px] z-30 bg-white border-b border-gray-100 px-4 flex items-center gap-3"
             role="banner"
         >
             {/* Sidebar Toggles */}
