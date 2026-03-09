@@ -32,6 +32,27 @@ export const NavItem: React.FC<NavItemProps> = ({ item, collapsed, onToggle }) =
     const isActive = item.isActive;
     const isOpen = item.isOpen;
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+        }
+    };
+
+    const handleChildKeyDown = (e: React.KeyboardEvent, idx: number) => {
+        if (!item.children) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const nextIdx = (idx + 1) % item.children.length;
+            (document.getElementById(`child-${item.label}-${nextIdx}`) as HTMLElement)?.focus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevIdx = (idx - 1 + item.children.length) % item.children.length;
+            (document.getElementById(`child-${item.label}-${prevIdx}`) as HTMLElement)?.focus();
+        }
+    };
+
     return (
         <div
             className="relative group"
@@ -40,6 +61,7 @@ export const NavItem: React.FC<NavItemProps> = ({ item, collapsed, onToggle }) =
         >
             <button
                 onClick={onToggle}
+                onKeyDown={handleKeyDown}
                 className={`
           w-full flex items-center px-2 py-1.5 text-sm rounded-md transition-colors duration-150 relative
           ${isActive && !hasChildren
@@ -80,10 +102,13 @@ export const NavItem: React.FC<NavItemProps> = ({ item, collapsed, onToggle }) =
             overflow-hidden transition-all duration-200 ease-in-out pl-9 space-y-0.5
             ${isOpen ? 'max-h-96 mt-0.5' : 'max-h-0'}
           `}
+                    role="group"
                 >
                     {item.children?.map((child, idx) => (
                         <button
                             key={idx}
+                            id={`child-${item.label}-${idx}`}
+                            onKeyDown={(e) => handleChildKeyDown(e, idx)}
                             className={`
                 w-full text-left py-1.5 px-2 text-sm rounded-md relative transition-colors duration-150
                 ${child.isActive
