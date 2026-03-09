@@ -1,0 +1,109 @@
+/**
+ * Trellis Design System Tokens
+ * Root CSS variables used across the Rentvine application.
+ */
+
+:root {
+  /* === COLORS: SURFACES === */
+  --surface-default: #ffffff;
+  --surface-recessed: #f8f9fa;   /* neutral/light/50 */
+  --surface-elevated: #ffffff;
+  --surface-overlay: #ffffff;
+  --surface-disabled: #f8f9fa;
+
+  /* === COLORS: BRAND === */
+  --color-brand: #00a54f;
+  --color-brand-hover: #009046;
+  --color-brand-active: #007a3c;
+  --color-brand-muted: #e6f7ee;
+  --color-brand-surface: #f0fbf5;
+  --color-primary: #03893f;
+  --color-primary-hover: #027a38;
+  --color-primary-active: #026830;
+  --color-primary-muted: #e8f5ee;
+  --color-primary-surface: #f2fbf6;
+
+  /* === COLORS: INTENTS === */
+  --color-error: #dc2626;
+  --color-error-surface: #fef2f2;
+  --color-error-border: #fca5a5;
+  --color-warning: #d97706;
+  --color-warning-surface: #fffbeb;
+  --color-warning-border: #fcd34d;
+  --color-success: #16a34a;
+  --color-success-surface: #f0fdf4;
+  --color-success-border: #86efac;
+  --color-info: #2563eb;
+  --color-info-surface: #eff6ff;
+  --color-info-border: #93c5fd;
+
+  /* === COLORS: NEUTRAL (foreground) === */
+  --color-neutral: #111827;
+  --color-neutral-muted: #6b7280;
+  --color-neutral-disabled: #d1d5db;
+  --color-neutral-link: #2563eb;
+  --color-neutral-link-hover: #1d4ed8;
+
+  /* === COLORS: BORDERS === */
+  --border-default: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-focus: #00a54f;
+  --border-error: #dc2626;
+
+  /* === TYPOGRAPHY === */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  --text-body-xs: 12px;
+  --text-body-sm: 14px;
+  --text-body-md: 16px;
+  --text-body-lg: 18px;
+  --text-heading-sm: 18px;
+  --text-heading-md: 22px;
+  --text-heading-lg: 28px;
+
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --tracking-heading: -0.4px;
+  --tracking-heading-lg: -0.8px;
+
+  /* === SPACING === */
+  --space-025: 1px;   --space-050: 2px;   --space-075: 3px;
+  --space-100: 4px;   --space-150: 6px;   --space-200: 8px;
+  --space-250: 10px;  --space-300: 12px;  --space-400: 16px;
+  --space-500: 20px;  --space-600: 24px;  --space-700: 28px;
+  --space-800: 32px;  --space-900: 36px;  --space-1000: 40px;
+  --space-1200: 48px; --space-1400: 56px; --space-1600: 64px;
+
+  /* === BORDER RADIUS === */
+  --radius-025: 2px;  --radius-050: 4px;  --radius-075: 6px;
+  --radius-100: 8px;  --radius-150: 12px; --radius-200: 16px;
+  --radius-full: 9999px;
+
+  /* === BORDER WIDTH === */
+  --border-width-100: 1px;
+  --border-width-150: 1.5px;
+  --border-width-200: 2px;
+  --border-width-400: 4px;
+
+  /* === SHADOWS === */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+
+  /* === SIDEBAR === */
+  --sidebar-bg: #2b2b2b;
+  --sidebar-hover: #363636;
+  --sidebar-active: #3a3a3a;
+  --sidebar-width-expanded: 232px;
+  --sidebar-width-collapsed: 56px;
+
+  /* === TRANSITIONS === */
+  --transition-sidebar: width 200ms ease-in-out, transform 200ms ease-in-out;
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 200ms ease-in-out;
+}
