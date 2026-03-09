@@ -7,7 +7,7 @@ interface OwnerApprovalCellProps {
     status: OwnerApprovalStatus;
 }
 
-export const OwnerApprovalCell: React.FC<OwnerApprovalCellProps> = ({ status }) => {
+export const OwnerApprovalCell: React.FC<OwnerApprovalCellProps> = React.memo(({ status }) => {
     const config = OWNER_APPROVAL_CONFIG[status] || {
         label: status,
         icon: 'minus',
@@ -42,4 +42,5 @@ export const OwnerApprovalCell: React.FC<OwnerApprovalCellProps> = ({ status }) 
             <span className="font-medium">{config.label}</span>
         </div>
     );
-};
+});
+OwnerApprovalCell.displayName = 'OwnerApprovalCell';

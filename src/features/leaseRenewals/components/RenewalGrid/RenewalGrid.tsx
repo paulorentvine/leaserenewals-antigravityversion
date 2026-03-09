@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, FileSearch, PencilLine } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, FileSearch, PencilLine, ClipboardList } from 'lucide-react';
+import { EmptyState } from '../../../../components/ui/EmptyState';
+import { Tooltip } from '../../../../components/ui/Tooltip';
 import type { RenewalGridProps, GridColumn } from './RenewalGrid.types';
 import { RenewalRow } from './RenewalRow';
 
@@ -24,7 +26,10 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
     onSortChange,
     selectedIds,
     onSelectionChange,
-    editableGrid
+    editableGrid,
+    totalCount,
+    hasActiveFilters,
+    onClearFilters
 }) => {
     const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
@@ -65,9 +70,14 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
             className="flex-1 overflow-auto bg-white custom-scrollbar"
             onKeyDown={editableGrid.handleGridKeyDown}
         >
-            <table className="w-full min-w-[1200px] text-sm border-collapse table-fixed">
+            <table
+                role="grid"
+                aria-label="Lease renewals"
+                aria-rowcount={renewals.length}
+                className="w-full min-w-[1200px] text-sm border-collapse table-fixed"
+            >
                 <thead className="sticky top-0 z-10">
-                    <tr className="border-y border-gray-200 bg-gray-50/90 backdrop-blur-sm">
+                    <tr role="row" className="border-y border-gray-200 bg-gray-50/90 backdrop-blur-sm">
                         {GRID_COLUMNS.map((col) => {
                             const isSorted = sort.column === col.key;
                             const SortIcon = isSorted
@@ -95,19 +105,21 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                                             aria-label="Select all renewals"
                                         />
                                     ) : col.sortable ? (
-                                        <button
-                                            onClick={() => handleToggleSort(col.key)}
-                                            className={`
-                                                inline-flex items-center gap-1.5 transition-colors
-                                                ${isSorted ? 'text-neutral' : 'hover:text-neutral'}
-                                                ${col.align === 'right' ? 'flex-row-reverse' : ''}
-                                            `}
-                                            aria-sort={isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                                        >
-                                            <span>{col.label}</span>
-                                            <SortIcon size={12} className={isSorted ? 'text-[var(--color-brand)]' : 'text-gray-400'} />
-                                            {col.editable && <PencilLine size={10} className="text-gray-300 ml-0.5" />}
-                                        </button>
+                                        <Tooltip content={`Sort by ${col.label}`}>
+                                            <button
+                                                onClick={() => handleToggleSort(col.key)}
+                                                className={`
+                                                    inline-flex items-center gap-1.5 transition-colors
+                                                    ${isSorted ? 'text-neutral' : 'hover:text-neutral'}
+                                                    ${col.align === 'right' ? 'flex-row-reverse' : ''}
+                                                `}
+                                                aria-sort={isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                            >
+                                                <span>{col.label}</span>
+                                                <SortIcon size={12} className={isSorted ? 'text-[var(--color-brand)]' : 'text-gray-400'} />
+                                                {col.editable && <PencilLine size={10} className="text-gray-300 ml-0.5" />}
+                                            </button>
+                                        </Tooltip>
                                     ) : (
                                         <div className="flex items-center gap-1">
                                             <span>{col.label}</span>
@@ -138,15 +150,21 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                     ) : (
                         <tr>
                             <td colSpan={GRID_COLUMNS.length} className="py-24">
-                                <div className="flex flex-col items-center justify-center text-center">
-                                    <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
-                                        <FileSearch size={32} className="text-gray-200" />
-                                    </div>
-                                    <p className="text-sm font-semibold text-gray-500">No renewals found</p>
-                                    <p className="text-xs text-gray-400 mt-1 max-w-[280px]">
-                                        Try adjusting your filters or search terms to find what you're looking for.
-                                    </p>
-                                </div>
+                                {totalCount === 0 ? (
+                                    <EmptyState
+                                        icon={ClipboardList}
+                                        heading="No renewals yet"
+                                        body="Leases approaching their end date will appear here automatically."
+                                    />
+                                ) : (
+                                    <EmptyState
+                                        icon={FileSearch}
+                                        heading="No renewals match your filters"
+                                        body="Try adjusting the date range or clearing active filters."
+                                        actionLabel={hasActiveFilters ? "Clear all filters" : undefined}
+                                        onAction={hasActiveFilters ? onClearFilters : undefined}
+                                    />
+                                )}
                             </td>
                         </tr>
                     )}

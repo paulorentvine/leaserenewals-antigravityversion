@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, AlertCircle, AlertTriangle, Check } from 'lucide-react';
+import { Tooltip } from '../../../../components/ui/Tooltip';
 import type { NewTermOption, MTMPolicy } from '../../types';
 import { TERM_OPTIONS } from '../../constants';
 import { buildCellId } from './CellNavigation';
@@ -162,9 +163,11 @@ export const EditableTermCell: React.FC<EditableTermCellProps> = ({
                 </span>
 
                 {isForbidden && (
-                    <span title="MTM is not allowed by policy for this unit" className="inline-flex">
-                        <AlertCircle size={11} className="text-red-600" />
-                    </span>
+                    <Tooltip content="Month-to-month is not allowed for this unit. Tenant must sign a fixed-term renewal.">
+                        <span className="inline-flex">
+                            <AlertCircle size={11} className="text-red-600" />
+                        </span>
+                    </Tooltip>
                 )}
                 {isPremium && (
                     <AlertTriangle size={11} className="text-amber-700" />

@@ -3,6 +3,7 @@ import { User, ChevronDown, GitBranch, X } from 'lucide-react';
 import { MTMRuleForm } from './MTMRuleForm';
 import type { OwnerMTMRule } from './MTMRulesDrawer.types';
 import { MTMBadge } from '../RenewalGrid/MTMBadge';
+import { Tooltip } from '../../../../components/ui/Tooltip';
 
 interface OwnerRuleCardProps {
     rule: OwnerMTMRule;
@@ -77,13 +78,14 @@ export const OwnerRuleCard: React.FC<OwnerRuleCardProps> = ({
                     </button>
                     <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
 
-                    <button
-                        onClick={handleRemove}
-                        className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1"
-                        title="Remove owner override"
-                    >
-                        <X size={12} />
-                    </button>
+                    <Tooltip content="Remove owner override">
+                        <button
+                            onClick={handleRemove}
+                            className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1"
+                        >
+                            <X size={12} />
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
 

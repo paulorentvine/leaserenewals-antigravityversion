@@ -16,7 +16,7 @@ import { EditableRentCell } from './EditableRentCell';
 import { EditableTermCell } from './EditableTermCell';
 import { buildCellId } from './CellNavigation';
 
-export const RenewalRow: React.FC<RenewalRowProps> = ({
+export const RenewalRow: React.FC<RenewalRowProps> = React.memo(({
     renewal,
     isSelected,
     onSelect,
@@ -171,4 +171,5 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
             </td>
         </tr>
     );
-};
+});
+RenewalRow.displayName = 'RenewalRow';

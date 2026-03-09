@@ -8,7 +8,7 @@ interface MTMBadgeProps {
     premiumPercent?: number;
 }
 
-export const MTMBadge: React.FC<MTMBadgeProps> = ({ policy, premiumPercent }) => {
+export const MTMBadge: React.FC<MTMBadgeProps> = React.memo(({ policy, premiumPercent }) => {
     const config = MTM_POLICY_CONFIG[policy as keyof typeof MTM_POLICY_CONFIG] || { label: policy, color: 'gray' };
 
     const colorMap: Record<string, string> = {
@@ -44,4 +44,5 @@ export const MTMBadge: React.FC<MTMBadgeProps> = ({ policy, premiumPercent }) =>
             <span>{label}</span>
         </span>
     );
-};
+});
+MTMBadge.displayName = 'MTMBadge';

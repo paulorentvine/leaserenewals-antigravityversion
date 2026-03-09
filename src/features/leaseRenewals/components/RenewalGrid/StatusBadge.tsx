@@ -7,7 +7,7 @@ interface StatusBadgeProps {
     size?: 'sm' | 'default';
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'default' }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = React.memo(({ status, size = 'default' }) => {
     const config = RENEWAL_STATUS_CONFIG[status] || { label: status, color: 'gray' };
 
     const colorMap: Record<string, string> = {
@@ -43,4 +43,5 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'defaul
             <span>{config.label}</span>
         </span>
     );
-};
+});
+StatusBadge.displayName = 'StatusBadge';

@@ -123,9 +123,25 @@ export const MTMRulesDrawer: React.FC<MTMRulesDrawerProps> = ({
                     )}
                 </div>
 
-                {/* SECTION NAV */}
                 <div className="px-6 pt-4 pb-0 shrink-0">
-                    <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-2">
+                    <div
+                        className="flex gap-1 overflow-x-auto scrollbar-hide pb-2"
+                        role="tablist"
+                        aria-label="MTM rule scope"
+                        onKeyDown={(e) => {
+                            const tabIds = tabs.map(t => t.id);
+                            const currentIdx = tabIds.indexOf(rulesHook.activeSection as any);
+                            if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                const next = (currentIdx + 1) % tabs.length;
+                                rulesHook.setActiveSection(tabIds[next] as any);
+                            } else if (e.key === 'ArrowLeft') {
+                                e.preventDefault();
+                                const prev = (currentIdx - 1 + tabs.length) % tabs.length;
+                                rulesHook.setActiveSection(tabIds[prev] as any);
+                            }
+                        }}
+                    >
                         {tabs.map(tab => {
                             const isActive = rulesHook.activeSection === tab.id;
                             const isOwners = tab.id === 'owners';
@@ -134,9 +150,12 @@ export const MTMRulesDrawer: React.FC<MTMRulesDrawerProps> = ({
                             return (
                                 <button
                                     key={tab.id}
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    tabIndex={isActive ? 0 : -1}
                                     onClick={() => rulesHook.setActiveSection(tab.id as any)}
                                     className={`
-                                        px-3 py-1.5 rounded-[var(--radius-full)] text-sm whitespace-nowrap transition-colors duration-150 flex items-center shrink-0
+                                        px-3 py-1.5 rounded-[var(--radius-full)] text-sm whitespace-nowrap transition-colors duration-150 flex items-center shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]
                                         ${isActive ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}
                                     `}
                                 >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, ClipboardList, Settings, User, ArrowRight } from 'lucide-react';
+import { EmptyState } from '../../../../components/ui/EmptyState';
 import type { MTMAuditEntry } from '../../types';
 
 interface MTMAuditLogProps {
@@ -51,10 +52,13 @@ export const MTMAuditLog: React.FC<MTMAuditLogProps> = ({ entries }) => {
             </div>
 
             {entries.length === 0 ? (
-                <div className="text-center py-12">
-                    <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
-                    <div className="text-sm text-gray-400">No changes recorded yet</div>
-                    <div className="text-xs text-gray-400">Rule changes will appear here after saving.</div>
+                <div className="py-4">
+                    <EmptyState
+                        icon={ClipboardList}
+                        heading="No changes recorded yet"
+                        body="Rule changes will appear here after saving."
+                        className="!py-8"
+                    />
                 </div>
             ) : (
                 <div className="relative">

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     Send,
     CheckCircle,
@@ -20,12 +20,40 @@ export const BulkConfirmModal: React.FC<BulkConfirmModalProps> = ({
     onConfirm,
     onCancel
 }) => {
+    const cancelRef = useRef<HTMLButtonElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onCancel();
+        // Focus the cancel button on mount
+        cancelRef.current?.focus();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onCancel();
+                return;
+            }
+            // Focus trap
+            if (e.key === 'Tab' && modalRef.current) {
+                const focusableNodes = modalRef.current.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                const firstElement = focusableNodes[0] as HTMLElement;
+                const lastElement = focusableNodes[focusableNodes.length - 1] as HTMLElement;
+                if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
         };
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
     }, [onCancel]);
 
     const config = {
@@ -87,17 +115,24 @@ export const BulkConfirmModal: React.FC<BulkConfirmModalProps> = ({
             />
 
             {/* Modal Content */}
-            <div className="relative bg-white rounded-[var(--radius-200)] shadow-[var(--shadow-xl)] w-full max-w-[480px] max-h-[80vh] overflow-hidden flex flex-col animate-in scale-in-95 fade-in duration-150 ease-out">
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="bulk-confirm-title"
+                className="relative bg-white rounded-[var(--radius-200)] shadow-[var(--shadow-xl)] w-full max-w-[480px] max-h-[80vh] overflow-hidden flex flex-col animate-in scale-in-95 fade-in duration-150 ease-out"
+            >
                 <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center">
                         <div className={`${iconBg} ${iconColor} w-10 h-10 rounded-full flex items-center justify-center`}>
                             <Icon size={20} />
                         </div>
-                        <h2 className="text-lg font-bold text-gray-900 ml-3">{title}</h2>
+                        <h2 id="bulk-confirm-title" className="text-lg font-bold text-gray-900 ml-3">{title}</h2>
                     </div>
                     <button
                         onClick={onCancel}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                        aria-label="Close confirmation dialog"
                     >
                         <X size={20} />
                     </button>
@@ -155,6 +190,7 @@ export const BulkConfirmModal: React.FC<BulkConfirmModalProps> = ({
 
                 <div className="px-6 pb-6 pt-4 flex gap-3 justify-end bg-gray-50/50">
                     <button
+                        ref={cancelRef}
                         onClick={onCancel}
                         className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-[var(--radius-100)] hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95"
                     >
@@ -162,7 +198,6 @@ export const BulkConfirmModal: React.FC<BulkConfirmModalProps> = ({
                     </button>
                     <button
                         onClick={onConfirm}
-                        autoFocus
                         className={`px-5 py-2.5 text-sm font-semibold text-white rounded-[var(--radius-100)] transition-all active:scale-95 shadow-sm ${confirmColor}`}
                     >
                         {confirmLabel}

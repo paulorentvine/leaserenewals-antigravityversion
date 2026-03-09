@@ -20,6 +20,9 @@ export interface RenewalGridProps {
     selectedIds: Set<string>;
     onSelectionChange: (ids: Set<string>) => void;
     editableGrid: UseEditableGridReturn;
+    totalCount: number;
+    hasActiveFilters: boolean;
+    onClearFilters: () => void;
 }
 
 export interface RenewalRowProps {

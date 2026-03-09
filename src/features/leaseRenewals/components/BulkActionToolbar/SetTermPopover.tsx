@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { AlertTriangle, Check } from 'lucide-react';
+import { Tooltip } from '../../../../components/ui/Tooltip';
 import type { SetTermPopoverProps } from './BulkActionToolbar.types';
 import { TERM_OPTIONS } from '../../constants';
 import { MTMPolicy } from '../../types';
@@ -60,15 +61,14 @@ export const SetTermPopover: React.FC<SetTermPopoverProps> = ({
                     const isMTM = option.value === 'month_to_month';
                     const showWarning = isMTM && anyForbidsMTM;
 
-                    return (
+                    const buttonContent = (
                         <button
                             key={option.value}
                             onClick={() => onApply(option.value)}
                             className={`
-                w-full flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-100)] text-sm transition-colors duration-100 outline-none focus-visible:ring-2 focus-visible:ring-brand
-                ${showWarning ? 'text-warning hover:bg-warning-surface' : 'text-neutral hover:bg-gray-50'}
-              `}
-                            title={isMTM && showWarning ? `${mtmForbiddenCount} selected renewal(s) have MTM disabled by policy` : undefined}
+                                w-full flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-100)] text-sm transition-colors duration-100 outline-none focus-visible:ring-2 focus-visible:ring-brand
+                                ${showWarning ? 'text-warning hover:bg-warning-surface' : 'text-neutral hover:bg-gray-50'}
+                            `}
                         >
                             <div className="flex items-center gap-2">
                                 <span>{option.label}</span>
@@ -84,6 +84,15 @@ export const SetTermPopover: React.FC<SetTermPopoverProps> = ({
                             {isCurrent && <Check size={14} className="text-brand" />}
                         </button>
                     );
+
+                    if (isMTM && showWarning) {
+                        return (
+                            <Tooltip key={option.value} content={`${mtmForbiddenCount} selected renewal(s) have MTM disabled by policy`} side="left">
+                                <div className="w-full">{buttonContent}</div>
+                            </Tooltip>
+                        );
+                    }
+                    return buttonContent;
                 })}
             </div>
         </div>

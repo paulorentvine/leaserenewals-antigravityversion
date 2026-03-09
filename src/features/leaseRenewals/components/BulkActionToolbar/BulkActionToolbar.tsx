@@ -12,6 +12,7 @@ import type { BulkActionToolbarProps } from './BulkActionToolbar.types';
 import { ApplyIncreasePopover } from './ApplyIncreasePopover';
 import { SetTermPopover } from './SetTermPopover';
 import { RenewalStatus, OwnerApprovalStatus } from '../../types';
+import { Tooltip } from '../../../../components/ui/Tooltip';
 
 export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
     selectedCount,
@@ -97,21 +98,30 @@ export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
                     <div className="w-px h-5 bg-white/20 mx-1" />
 
                     {/* Send Offers Button */}
-                    <button
-                        onClick={() => onAction({
-                            type: 'send_offers',
-                            targetIds: selectedRenewals
-                                .filter(r => r.status === RenewalStatus.PENDING || r.status === RenewalStatus.TENANT_RESPONDED)
-                                .map(r => r.id)
-                        })}
-                        disabled={!canSendOffers}
-                        title={!canSendOffers ? "All selected renewals have already had offers sent" : undefined}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-[var(--radius-100)] text-sm font-semibold transition-all ${canSendOffers ? 'bg-white/10 hover:bg-white/20 text-white' : 'opacity-30 cursor-not-allowed bg-white/5 grayscale'
-                            }`}
-                    >
-                        <Send size={15} />
-                        <span>Send Offers</span>
-                    </button>
+                    {canSendOffers ? (
+                        <button
+                            onClick={() => onAction({
+                                type: 'send_offers',
+                                targetIds: selectedRenewals
+                                    .filter(r => r.status === RenewalStatus.PENDING || r.status === RenewalStatus.TENANT_RESPONDED)
+                                    .map(r => r.id)
+                            })}
+                            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-100)] text-sm font-semibold transition-all bg-white/10 hover:bg-white/20 text-white"
+                        >
+                            <Send size={15} />
+                            <span>Send Offers</span>
+                        </button>
+                    ) : (
+                        <Tooltip content="All selected renewals have already had offers sent">
+                            <button
+                                disabled
+                                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-100)] text-sm font-semibold transition-all opacity-30 cursor-not-allowed bg-white/5 grayscale"
+                            >
+                                <Send size={15} />
+                                <span>Send Offers</span>
+                            </button>
+                        </Tooltip>
+                    )}
 
                     {/* Approve Button */}
                     <button
