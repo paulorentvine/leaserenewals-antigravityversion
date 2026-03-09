@@ -28,6 +28,8 @@ import type {
 import { RenewalStatus } from './types';
 import type { RenewalTab } from './components/Tabs/RenewalTabs.types';
 import { MOCK_RENEWALS } from './mockData';
+import { getScenarioById, getScenarioRenewals, getScenarioStats } from './mockDataUtils';
+import { DevToolbar } from './components/DevToolbar/DevToolbar';
 import { filterRenewals, sortRenewals, formatCurrency } from './utils';
 
 /**
@@ -36,7 +38,8 @@ import { filterRenewals, sortRenewals, formatCurrency } from './utils';
 export const LeaseRenewalsPage: React.FC = () => {
     // 1. STATE
     const [activeTab, setActiveTab] = useState<RenewalTab>('active');
-    const [renewals, setRenewals] = useState<LeaseRenewal[]>(MOCK_RENEWALS);
+    const [activeScenarioId, setActiveScenarioId] = useState('full');
+    const [renewals, setRenewals] = useState<LeaseRenewal[]>(() => getScenarioRenewals('full'));
     const [filters, setFilters] = useState<RenewalFilters>({
         search: '',
         expiringWithin: 30,
@@ -59,10 +62,10 @@ export const LeaseRenewalsPage: React.FC = () => {
                 setLoadError('Failed to load renewals. Please try again.');
             }
             setIsLoading(false);
-            setLiveAnnouncement(!SIMULATE_ERROR ? `${MOCK_RENEWALS.length} renewals loaded.` : 'Failed to load renewals.');
+            setLiveAnnouncement(!SIMULATE_ERROR ? `${renewals.length} renewals loaded.` : 'Failed to load renewals.');
         }, 800);
         return () => clearTimeout(timer);
-    }, []);
+    }, [renewals.length]);
 
     useEffect(() => {
         if (!liveAnnouncement) return;
@@ -165,7 +168,28 @@ export const LeaseRenewalsPage: React.FC = () => {
             }));
     }, [renewalsWithResolvedMTM]);
 
-    // 5. HANDLERS
+    // 5. SCENARIO ENGINE
+    const handleScenarioChange = useCallback((id: string) => {
+        setActiveScenarioId(id);
+        const scenario = getScenarioById(id);
+        setRenewals(getScenarioRenewals(id));
+        setSelectedIds(new Set());
+        editingCellIdRef.current = null;
+        undoStack.clear();
+        if (scenario?.initialFilters) {
+            setFilters(prev => ({ ...prev, ...scenario.initialFilters }));
+        }
+        if (scenario?.initialSort) {
+            setSort(scenario.initialSort);
+        }
+    }, []);
+
+    const scenarioStats = useMemo(
+        () => getScenarioStats(renewals),
+        [renewals]
+    );
+
+    // 6. HANDLERS
     const handleRenewalChange = useCallback((id: string, changes: Partial<LeaseRenewal>) => {
         setRenewals(prev => prev.map(r =>
             r.id === id ? { ...r, ...changes, isDirty: true } : r
