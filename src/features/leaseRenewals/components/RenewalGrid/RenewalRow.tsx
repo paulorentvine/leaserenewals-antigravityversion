@@ -12,12 +12,15 @@ import {
     isLeaseEndingSoon
 } from '../../utils';
 import { RenewalStatus, OwnerApprovalStatus } from '../../types';
-import { TERM_OPTIONS } from '../../constants';
+import { EditableRentCell } from './EditableRentCell';
+import { EditableTermCell } from './EditableTermCell';
+import { buildCellId } from './CellNavigation';
 
 export const RenewalRow: React.FC<RenewalRowProps> = ({
     renewal,
     isSelected,
-    onSelect
+    onSelect,
+    editableGrid
 }) => {
     const pct = calculateRentChangePercent(renewal.currentRent, renewal.proposedRent);
     const isEndingSoon = isLeaseEndingSoon(renewal.leaseEndDate, 30);
@@ -25,7 +28,17 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
     const requiresAttention = renewal.status === RenewalStatus.VACATING ||
         renewal.ownerApprovalStatus === OwnerApprovalStatus.REQUIRES_ACTION;
 
-    const termOption = TERM_OPTIONS.find(opt => opt.value === renewal.proposedTerm);
+    const {
+        getCellState,
+        editingCellId,
+        editingValue,
+        validationError,
+        handleCellFocus,
+        handleCellEditStart,
+        handleCellEditCommit,
+        handleCellEditCancel,
+        handleEditingValueChange,
+    } = editableGrid;
 
     return (
         <tr
@@ -82,15 +95,20 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
                 {formatCurrency(renewal.currentRent)}
             </td>
 
-            {/* 5. New Rent (Editable Hint) */}
-            <td
-                className="py-3 px-3 min-w-[120px] text-right bg-brand-surface transition-colors"
-                title="Click to edit (available in next update)"
-            >
-                <div className="inline-block border-b border-dashed border-success-border font-mono text-sm text-neutral cursor-default">
-                    {formatCurrency(renewal.proposedRent)}
-                </div>
-            </td>
+            {/* 5. New Rent */}
+            <EditableRentCell
+                renewalId={renewal.id}
+                value={renewal.proposedRent}
+                currentRent={renewal.currentRent}
+                cellState={getCellState(buildCellId(renewal.id, 'proposedRent'))}
+                editingValue={editingCellId === buildCellId(renewal.id, 'proposedRent') ? editingValue : ''}
+                validationError={editingCellId === buildCellId(renewal.id, 'proposedRent') ? validationError : null}
+                onFocus={handleCellFocus}
+                onEditStart={handleCellEditStart}
+                onCommit={handleCellEditCommit}
+                onCancel={handleCellEditCancel}
+                onValueChange={handleEditingValueChange}
+            />
 
             {/* 6. % Change */}
             <td className="py-3 px-3 min-w-[100px] text-right">
@@ -111,18 +129,17 @@ export const RenewalRow: React.FC<RenewalRowProps> = ({
                 </div>
             </td>
 
-            {/* 8. New Term (Editable Hint) */}
-            <td
-                className="py-3 px-3 min-w-[140px] text-sm"
-                title="Click to edit (available in next update)"
-            >
-                <div className={`
-          inline-block border-b border-dashed border-success-border transition-colors
-          ${renewal.proposedTerm === 'month_to_month' ? 'text-warning font-semibold' : 'text-neutral'}
-        `}>
-                    {termOption?.label || renewal.proposedTerm}
-                </div>
-            </td>
+            {/* 8. New Term */}
+            <EditableTermCell
+                renewalId={renewal.id}
+                value={renewal.proposedTerm}
+                mtmPolicy={renewal.mtmPolicy}
+                cellState={getCellState(buildCellId(renewal.id, 'proposedTerm'))}
+                onFocus={handleCellFocus}
+                onEditStart={handleCellEditStart}
+                onCommit={handleCellEditCommit}
+                onCancel={handleCellEditCancel}
+            />
 
             {/* 9. MTM */}
             <td className="py-3 px-3 min-w-[140px]">

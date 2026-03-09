@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { FileText } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { FileText, Undo2, Redo2 } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
 import { RenewalTabs } from './components/Tabs/RenewalTabs';
 import { FilterBar } from './components/FilterBar/FilterBar';
@@ -8,6 +8,8 @@ import { RenewalGrid } from './components/RenewalGrid/RenewalGrid';
 import { BulkActionToolbar } from './components/BulkActionToolbar/BulkActionToolbar';
 import { BulkConfirmModal } from './components/BulkActionToolbar/BulkConfirmModal';
 import { useBulkActions } from './hooks/useBulkActions';
+import { useUndoStack } from './hooks/useUndoStack';
+import { useEditableGrid } from './hooks/useEditableGrid';
 import type {
     LeaseRenewal,
     RenewalFilters,
@@ -34,7 +36,7 @@ export const LeaseRenewalsPage: React.FC = () => {
         direction: 'asc',
     });
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [editingCellId, setEditingCellId] = useState<string | null>(null);
+    const [toastMessage, setToastMessage] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
 
     // 2. BULK ACTIONS HOOK
     const {
@@ -95,11 +97,77 @@ export const LeaseRenewalsPage: React.FC = () => {
     }, [renewals]);
 
     // 4. HANDLERS
-    const handleRenewalChange = (id: string, changes: Partial<LeaseRenewal>) => {
+    const handleRenewalChange = useCallback((id: string, changes: Partial<LeaseRenewal>) => {
         setRenewals(prev => prev.map(r =>
             r.id === id ? { ...r, ...changes, isDirty: true } : r
         ));
-    };
+    }, []);
+
+    const undoStack = useUndoStack<Partial<LeaseRenewal> & { id: string }>(50);
+
+    const editableGrid = useEditableGrid({
+        renewals: sortedRenewals,
+        onRenewalChange: handleRenewalChange,
+        undoStack,
+    });
+
+    const showToast = useCallback((msg: string) => {
+        setToastMessage({ message: msg, visible: true });
+    }, []);
+
+    useEffect(() => {
+        if (toastMessage.visible) {
+            const t = setTimeout(() => {
+                setToastMessage(prev => ({ ...prev, visible: false }));
+            }, 2000);
+            return () => clearTimeout(t);
+        }
+    }, [toastMessage.visible]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) {
+                return;
+            }
+
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+            if (modifier && e.key.toLowerCase() === 'z') {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    if (undoStack.canRedo) {
+                        const entry = undoStack.redo();
+                        if (entry) {
+                            handleRenewalChange(entry.next.id, entry.next);
+                            showToast(`Redone: ${entry.label}`);
+                        }
+                    }
+                } else {
+                    e.preventDefault();
+                    if (undoStack.canUndo) {
+                        const entry = undoStack.undo();
+                        if (entry) {
+                            handleRenewalChange(entry.previous.id, entry.previous);
+                            showToast(`Undone: ${entry.label}`);
+                        }
+                    }
+                }
+            } else if (modifier && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                if (undoStack.canRedo) {
+                    const entry = undoStack.redo();
+                    if (entry) {
+                        handleRenewalChange(entry.next.id, entry.next);
+                        showToast(`Redone: ${entry.label}`);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [undoStack, handleRenewalChange, showToast]);
 
     const handleFiltersReset = () => {
         setFilters({ search: '', expiringWithin: 30 });
@@ -153,10 +221,7 @@ export const LeaseRenewalsPage: React.FC = () => {
                                 onSortChange={setSort}
                                 selectedIds={selectedIds}
                                 onSelectionChange={setSelectedIds}
-                                editingCellId={editingCellId}
-                                onCellEditStart={setEditingCellId}
-                                onCellEditEnd={() => setEditingCellId(null)}
-                                onRenewalChange={handleRenewalChange}
+                                editableGrid={editableGrid}
                             />
                         </div>
                     )}
@@ -205,6 +270,68 @@ export const LeaseRenewalsPage: React.FC = () => {
                     onCancel={handleCancelConfirm}
                 />
             )}
+
+            {/* Undo Indicator */}
+            {(undoStack.historySize > 0 || undoStack.canRedo) && (
+                <div className={`
+                    fixed right-4 z-30 transition-all duration-300
+                    bg-white border border-gray-200 rounded-[var(--radius-150)]
+                    shadow-[var(--shadow-md)] flex items-center gap-1 p-1
+                    ${selectedIds.size > 0 ? 'bottom-[72px]' : 'bottom-4'}
+                `}>
+                    <button
+                        onClick={() => {
+                            const entry = undoStack.undo();
+                            if (entry) {
+                                handleRenewalChange(entry.previous.id, entry.previous);
+                                showToast(`Undone: ${entry.label}`);
+                            }
+                        }}
+                        disabled={!undoStack.canUndo}
+                        title={undoStack.lastUndoLabel ? `Undo: ${undoStack.lastUndoLabel}` : 'Undo'}
+                        className={`
+                            px-2 py-1.5 rounded-[var(--radius-075)] flex items-center gap-1.5 text-xs font-medium transition-colors duration-100
+                            ${undoStack.canUndo ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'}
+                        `}
+                    >
+                        <Undo2 size={13} />
+                        Undo
+                        {undoStack.historySize > 0 && <span className="ml-1 text-[10px] text-gray-400">{undoStack.historySize} {undoStack.historySize === 1 ? 'change' : 'changes'}</span>}
+                    </button>
+
+                    <div className="w-px h-4 bg-gray-200" />
+
+                    <button
+                        onClick={() => {
+                            const entry = undoStack.redo();
+                            if (entry) {
+                                handleRenewalChange(entry.next.id, entry.next);
+                                showToast(`Redone: ${entry.label}`);
+                            }
+                        }}
+                        disabled={!undoStack.canRedo}
+                        title={undoStack.lastRedoLabel ? `Redo: ${undoStack.lastRedoLabel}` : 'Redo'}
+                        className={`
+                            px-2 py-1.5 rounded-[var(--radius-075)] flex items-center gap-1.5 text-xs font-medium transition-colors duration-100
+                            ${undoStack.canRedo ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'}
+                        `}
+                    >
+                        <Redo2 size={13} />
+                        Redo
+                    </button>
+                </div>
+            )}
+
+            {/* Toast */}
+            <div className={`
+                fixed bottom-12 left-1/2 -translate-x-1/2 z-50
+                bg-gray-900 text-white text-xs font-medium
+                px-3 py-2 rounded-[var(--radius-full)] shadow-[var(--shadow-lg)]
+                pointer-events-none transition-all duration-150
+                ${toastMessage.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
+            `}>
+                {toastMessage.message}
+            </div>
         </>
     );
 };

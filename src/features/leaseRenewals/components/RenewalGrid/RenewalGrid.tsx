@@ -24,10 +24,7 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
     onSortChange,
     selectedIds,
     onSelectionChange,
-    editingCellId,
-    onCellEditStart,
-    onCellEditEnd,
-    onRenewalChange
+    editableGrid
 }) => {
     const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +61,10 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
     };
 
     return (
-        <div className="flex-1 overflow-auto bg-white custom-scrollbar">
+        <div
+            className="flex-1 overflow-auto bg-white custom-scrollbar"
+            onKeyDown={editableGrid.handleGridKeyDown}
+        >
             <table className="w-full min-w-[1200px] text-sm border-collapse table-fixed">
                 <thead className="sticky top-0 z-10">
                     <tr className="border-y border-gray-200 bg-gray-50/90 backdrop-blur-sm">
@@ -125,7 +125,6 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                             <RenewalRow
                                 key={renewal.id}
                                 renewal={renewal}
-                                columns={GRID_COLUMNS}
                                 isSelected={selectedIds.has(renewal.id)}
                                 onSelect={(val) => {
                                     const newSet = new Set(selectedIds);
@@ -133,10 +132,7 @@ export const RenewalGrid: React.FC<RenewalGridProps> = ({
                                     else newSet.delete(renewal.id);
                                     onSelectionChange(newSet);
                                 }}
-                                editingCellId={editingCellId}
-                                onCellEditStart={onCellEditStart}
-                                onCellEditEnd={onCellEditEnd}
-                                onChange={(changes) => onRenewalChange(renewal.id, changes)}
+                                editableGrid={editableGrid}
                             />
                         ))
                     ) : (
