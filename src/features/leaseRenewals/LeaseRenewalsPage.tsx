@@ -10,6 +10,8 @@ import { BulkConfirmModal } from './components/BulkActionToolbar/BulkConfirmModa
 import { useBulkActions } from './hooks/useBulkActions';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useEditableGrid } from './hooks/useEditableGrid';
+import { useChargeGuardrails } from './hooks/useChargeGuardrails';
+import { ChargeGuardrailsModal } from './components/ChargeGuardrailsModal/ChargeGuardrailsModal';
 import type {
     LeaseRenewal,
     RenewalFilters,
@@ -18,7 +20,7 @@ import type {
 import { RenewalStatus } from './types';
 import type { RenewalTab } from './components/Tabs/RenewalTabs.types';
 import { MOCK_RENEWALS } from './mockData';
-import { filterRenewals, sortRenewals } from './utils';
+import { filterRenewals, sortRenewals, formatCurrency } from './utils';
 
 /**
  * Main dashboard container for the Lease Renewals feature.
@@ -51,6 +53,10 @@ export const LeaseRenewalsPage: React.FC = () => {
         selectedIds,
         onRenewalsChange: (updated) => setRenewals(updated),
         onSelectionChange: setSelectedIds,
+        onBeforeBulkRentChange: (items) => {
+            chargeGuardrails.triggerBulkGuardrail(items);
+            return false; // block direct apply
+        }
     });
 
     // 3. DERIVED DATA
@@ -105,10 +111,46 @@ export const LeaseRenewalsPage: React.FC = () => {
 
     const undoStack = useUndoStack<Partial<LeaseRenewal> & { id: string }>(50);
 
+    const chargeGuardrails = useChargeGuardrails({
+        renewals,
+        onRenewalsConfirmed: (updates) => {
+            setRenewals(prev => prev.map(r => {
+                const update = updates.find(u => u.id === r.id);
+                return update ? { ...r, ...update } : r;
+            }));
+
+            updates.forEach(update => {
+                const renewal = renewals.find(r => r.id === update.id);
+                if (!renewal) return;
+                undoStack.push({
+                    previous: {
+                        id: update.id,
+                        proposedRent: renewal.proposedRent,
+                        isDirty: renewal.isDirty,
+                    },
+                    next: {
+                        id: update.id,
+                        proposedRent: update.proposedRent,
+                        isDirty: true,
+                    },
+                    label: `Rent changed: ${formatCurrency(renewal.proposedRent)} → ${formatCurrency(update.proposedRent)}`,
+                    timestamp: Date.now(),
+                });
+            });
+        },
+        onRenewalsReverted: (reverts) => {
+            setRenewals(prev => prev.map(r => {
+                const revert = reverts.find(rv => rv.id === r.id);
+                return revert ? { ...r, proposedRent: revert.proposedRent } : r;
+            }));
+        },
+    });
+
     const editableGrid = useEditableGrid({
         renewals: sortedRenewals,
         onRenewalChange: handleRenewalChange,
         undoStack,
+        onChargeGuardrailNeeded: chargeGuardrails.triggerGuardrail,
     });
 
     const showToast = useCallback((msg: string) => {
@@ -268,6 +310,14 @@ export const LeaseRenewalsPage: React.FC = () => {
                     payload={confirmPayload}
                     onConfirm={handleConfirm}
                     onCancel={handleCancelConfirm}
+                />
+            )}
+
+            {chargeGuardrails.pendingPayload && (
+                <ChargeGuardrailsModal
+                    payload={chargeGuardrails.pendingPayload}
+                    onConfirm={chargeGuardrails.confirmGuardrail}
+                    onCancel={chargeGuardrails.cancelGuardrail}
                 />
             )}
 

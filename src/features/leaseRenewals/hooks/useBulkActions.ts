@@ -3,6 +3,8 @@ import type {
     BulkAction,
     LeaseRenewal,
 } from '../types';
+import type { ChargeGuardrailPayload } from '../components/ChargeGuardrailsModal/ChargeGuardrailsModal.types';
+import { analyzeCharges } from './useChargeGuardrails';
 import {
     RenewalStatus,
     OwnerApprovalStatus
@@ -14,6 +16,7 @@ interface UseBulkActionsOptions {
     selectedIds: Set<string>;
     onRenewalsChange: (updated: LeaseRenewal[]) => void;
     onSelectionChange: (ids: Set<string>) => void;
+    onBeforeBulkRentChange?: (items: ChargeGuardrailPayload[]) => boolean;
 }
 
 interface UseBulkActionsReturn {
@@ -31,6 +34,7 @@ export function useBulkActions({
     selectedIds,
     onRenewalsChange,
     onSelectionChange,
+    onBeforeBulkRentChange,
 }: UseBulkActionsOptions): UseBulkActionsReturn {
     const [pendingAction, setPendingAction] = useState<BulkAction | null>(null);
     const [confirmVariant, setConfirmVariant] = useState<ConfirmVariant | null>(null);
@@ -96,6 +100,34 @@ export function useBulkActions({
 
     const handleConfirm = () => {
         if (!pendingAction) return;
+
+        if (pendingAction.type === 'apply_percent_increase' || pendingAction.type === 'apply_flat_increase') {
+            if (onBeforeBulkRentChange) {
+                const items: ChargeGuardrailPayload[] = [];
+                for (const r of renewals) {
+                    if (!selectedIds.has(r.id)) continue;
+                    let newRent = r.proposedRent;
+                    if (pendingAction.type === 'apply_percent_increase') {
+                        newRent = Math.round(r.proposedRent * (1 + (pendingAction.payload?.percentIncrease || 0) / 100));
+                    } else if (pendingAction.type === 'apply_flat_increase') {
+                        newRent = r.proposedRent + (pendingAction.payload?.flatIncrease || 0);
+                    }
+                    if (newRent !== r.proposedRent) {
+                        items.push(analyzeCharges(r, newRent, r.proposedRent, 'bulk_apply'));
+                    }
+                }
+                if (items.length > 0) {
+                    const shouldContinue = onBeforeBulkRentChange(items);
+                    if (!shouldContinue) {
+                        setPendingAction(null);
+                        setConfirmVariant(null);
+                        setConfirmPayload(undefined);
+                        // We do not clear selection immediately if intercepted; it's handled externally
+                        return;
+                    }
+                }
+            }
+        }
 
         const updatedRenewals = renewals.map(r => {
             if (!selectedIds.has(r.id)) return r;

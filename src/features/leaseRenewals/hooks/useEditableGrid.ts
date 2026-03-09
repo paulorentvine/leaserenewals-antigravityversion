@@ -1,6 +1,8 @@
 import { useReducer, useCallback } from 'react';
 import type { LeaseRenewal, NewTermOption } from '../types';
 import type { UseUndoStackReturn } from './useUndoStack';
+import type { ChargeGuardrailPayload } from '../components/ChargeGuardrailsModal/ChargeGuardrailsModal.types';
+import { analyzeCharges } from './useChargeGuardrails';
 import {
     parseCellAddress,
     buildCellId,
@@ -14,6 +16,7 @@ interface UseEditableGridOptions {
     renewals: LeaseRenewal[];
     onRenewalChange: (id: string, changes: Partial<LeaseRenewal>) => void;
     undoStack: UseUndoStackReturn<Partial<LeaseRenewal> & { id: string }>;
+    onChargeGuardrailNeeded: (payload: ChargeGuardrailPayload) => void;
 }
 
 interface EditableGridState {
@@ -94,7 +97,7 @@ export interface UseEditableGridReturn {
     getCellState: (cellId: string) => 'idle' | 'active' | 'editing' | 'error';
 }
 
-export function useEditableGrid({ renewals, onRenewalChange, undoStack }: UseEditableGridOptions): UseEditableGridReturn {
+export function useEditableGrid({ renewals, onRenewalChange, undoStack, onChargeGuardrailNeeded }: UseEditableGridOptions): UseEditableGridReturn {
     const [state, dispatch] = useReducer(gridReducer, {
         activeCellId: null,
         editingCellId: null,
@@ -181,14 +184,15 @@ export function useEditableGrid({ renewals, onRenewalChange, undoStack }: UseEdi
                 return;
             }
 
-            onRenewalChange(row.id, { proposedRent: parsedValue, isDirty: true });
+            const analysis = analyzeCharges(
+                row,
+                parsedValue,
+                row.proposedRent
+            );
 
-            undoStack.push({
-                previous: { id: row.id, proposedRent: row.proposedRent, isDirty: row.isDirty },
-                next: { id: row.id, proposedRent: parsedValue, isDirty: true },
-                label: `Rent changed: ${formatCurrency(row.proposedRent)} → ${formatCurrency(parsedValue)}`,
-                timestamp: Date.now()
-            });
+            onChargeGuardrailNeeded(analysis);
+            dispatch({ type: 'CLEAR_EDIT_STATE' });
+            return;
 
         } else if (addr.column === 'proposedTerm') {
             const parsedValue = rawValue as NewTermOption;
