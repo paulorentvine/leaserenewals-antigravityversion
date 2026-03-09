@@ -1,601 +1,199 @@
-import type { LeaseRenewal } from './types';
-import {
-    RenewalStatus,
-    MTMPolicy,
-    OwnerApprovalStatus,
-    NewTermOption
-} from './types';
+import type { LeaseRenewal, RecurringCharge, ChargeTransition } from './types';
+import { RenewalStatus, MTMPolicy, OwnerApprovalStatus, NewTermOption } from './types';
 
-/**
- * FIXED REFERENCE DATE: 2025-03-15
- * Dates range roughly Apr 4 – May 29 2025 (20–75 days from reference)
- */
+export const MOCK_TODAY = '2025-03-15';
 
+function daysFromToday(n: number): string {
+    const d = new Date('2025-03-15');
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split('T')[0];
+}
+
+function daysAgo(n: number): string {
+    const d = new Date('2025-03-15');
+    d.setDate(d.getDate() - n);
+    return d.toISOString().split('T')[0];
+}
+
+const PORTFOLIOS = {
+    sunrise: { id: 'p1', name: 'Sunrise Properties' },
+    metro: { id: 'p2', name: 'Metro Rentals Group' },
+    campus: { id: 'p3', name: 'Campus Housing Co.' },
+    legacy: { id: 'p4', name: 'Legacy Real Estate' },
+};
+
+let _idCounter = 0;
+function nextId(prefix: string) { return `${prefix}${++_idCounter}`; }
+
+interface RenewalInput {
+    id: string;
+    tenant: { firstName: string; lastName: string; email: string; phone: string; portalAccess?: boolean };
+    owner: { firstName: string; lastName: string; email: string; phone: string; requiresApproval: boolean };
+    property: { address: string; unitNumber?: string; city: string; state: string; zip: string; type: 'single_family' | 'duplex' | 'condo' | 'apartment' };
+    portfolio: keyof typeof PORTFOLIOS;
+    currentRent: number;
+    proposedRent: number;
+    leaseEndDaysFromToday: number;
+    proposedTerm: NewTermOption;
+    currentTerm?: NewTermOption;
+    status: RenewalStatus;
+    ownerApproval: OwnerApprovalStatus;
+    mtmPolicy: MTMPolicy;
+    mtmPremiumPercent?: number;
+    charges: RecurringCharge[];
+    hasOverlap?: boolean;
+}
+
+function buildRenewal(input: RenewalInput): LeaseRenewal {
+    const p = PORTFOLIOS[input.portfolio];
+    const leaseEndDate = daysFromToday(input.leaseEndDaysFromToday);
+    const proposedStartDate = daysFromToday(input.leaseEndDaysFromToday + 1);
+    const primaryCharge = input.charges.find(c => c.isRentCharge);
+    const netChange = primaryCharge ? input.proposedRent - primaryCharge.amount : input.proposedRent;
+    const transition: ChargeTransition = {
+        existingCharges: [...input.charges],
+        proposedRentAmount: input.proposedRent,
+        proposedStartDate,
+        hasOverlap: input.hasOverlap ?? false,
+        netMonthlyChange: netChange,
+        confirmed: false,
+    };
+    return {
+        id: input.id,
+        leaseId: `lease-${input.id}`,
+        property: {
+            id: `prop-${input.id}`,
+            address: input.property.address,
+            unitNumber: input.property.unitNumber,
+            city: input.property.city,
+            state: input.property.state,
+            zip: input.property.zip,
+            portfolioId: p.id,
+            portfolioName: p.name,
+            propertyType: input.property.type,
+        },
+        tenant: {
+            id: `t-${input.id}`,
+            firstName: input.tenant.firstName,
+            lastName: input.tenant.lastName,
+            email: input.tenant.email,
+            phone: input.tenant.phone,
+            portalAccessEnabled: input.tenant.portalAccess ?? true,
+        },
+        owner: {
+            id: `o-${input.id}`,
+            firstName: input.owner.firstName,
+            lastName: input.owner.lastName,
+            email: input.owner.email,
+            phone: input.owner.phone,
+            requiresApproval: input.owner.requiresApproval,
+        },
+        currentRent: input.currentRent,
+        leaseEndDate,
+        currentTerm: input.currentTerm ?? NewTermOption.TWELVE_MONTHS,
+        proposedRent: input.proposedRent,
+        proposedTerm: input.proposedTerm,
+        status: input.status,
+        ownerApprovalStatus: input.ownerApproval,
+        mtmPolicy: input.mtmPolicy,
+        mtmPremiumPercent: input.mtmPremiumPercent,
+        currentCharges: input.charges,
+        chargeTransition: transition,
+        offers: [],
+        createdAt: daysAgo(90) + 'T00:00:00Z',
+        updatedAt: daysAgo(3) + 'T00:00:00Z',
+        isDirty: false,
+        isSelected: false,
+    };
+}
+
+function charge(id: string, label: string, amount: number, isRent: boolean, startDaysAgo: number, endDate?: undefined | string): RecurringCharge {
+    return { id, label, amount, frequency: 'monthly', startDate: daysAgo(startDaysAgo), endDate, isRentCharge: isRent };
+}
+
+// ── GROUP A: STANDARD RENEWALS (16) ────────────────────────
+export const MOCK_RENEWALS_A: LeaseRenewal[] = [
+    buildRenewal({ id: 'a01', tenant: { firstName: 'Marcus', lastName: 'Thompson', email: 'marcus.thompson@email.com', phone: '(512) 334-8821' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(512) 300-1001', requiresApproval: true }, property: { address: '2847 Ridgemont Dr', city: 'Austin', state: 'TX', zip: '78745', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1850, proposedRent: 1924, leaseEndDaysFromToday: 12, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a01-1', 'Monthly Rent', 1850, true, 365), charge('c-a01-2', 'Pet Fee', 50, false, 365)] }),
+    buildRenewal({ id: 'a02', tenant: { firstName: 'Jennifer', lastName: 'Walsh', email: 'j.walsh@gmail.com', phone: '(720) 445-9012' }, owner: { firstName: 'Sandra', lastName: 'Kim', email: 's.kim@metrorent.com', phone: '(720) 300-1002', requiresApproval: false }, property: { address: '1200 Larimer St', unitNumber: '4B', city: 'Denver', state: 'CO', zip: '80204', type: 'apartment' }, portfolio: 'metro', currentRent: 1425, proposedRent: 1482, leaseEndDaysFromToday: 18, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-a02-1', 'Monthly Rent', 1425, true, 365), charge('c-a02-2', 'Parking', 75, false, 365)] }),
+    buildRenewal({ id: 'a03', tenant: { firstName: 'Robert', lastName: 'Castillo', email: 'rcastillo@yahoo.com', phone: '(713) 667-3341' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-1003', requiresApproval: true }, property: { address: '5512 Westheimer Rd', city: 'Houston', state: 'TX', zip: '77056', type: 'duplex' }, portfolio: 'legacy', currentRent: 1650, proposedRent: 1733, leaseEndDaysFromToday: 25, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 10, charges: [charge('c-a03-1', 'Monthly Rent', 1650, true, 365)] }),
+    buildRenewal({ id: 'a04', tenant: { firstName: 'Patricia', lastName: 'Nguyen', email: 'p.nguyen@outlook.com', phone: '(505) 891-2234' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-1004', requiresApproval: false }, property: { address: '3301 Central Ave NW', city: 'Albuquerque', state: 'NM', zip: '87105', type: 'condo' }, portfolio: 'sunrise', currentRent: 1175, proposedRent: 1222, leaseEndDaysFromToday: 31, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OWNER_APPROVED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a04-1', 'Monthly Rent', 1175, true, 365), charge('c-a04-2', 'Storage Unit', 45, false, 180)] }),
+    buildRenewal({ id: 'a05', tenant: { firstName: 'Kevin', lastName: "O'Brien", email: 'kobrien@gmail.com', phone: '(512) 774-5521' }, owner: { firstName: 'Lisa', lastName: 'Chang', email: 'lchang@metrorent.com', phone: '(512) 300-1005', requiresApproval: false }, property: { address: '800 Congress Ave', unitNumber: '12', city: 'Austin', state: 'TX', zip: '78701', type: 'apartment' }, portfolio: 'metro', currentRent: 2100, proposedRent: 2184, leaseEndDaysFromToday: 35, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.SIGNED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-a05-1', 'Monthly Rent', 2100, true, 365), charge('c-a05-2', 'Covered Parking', 100, false, 365), charge('c-a05-3', 'Pet Fee', 65, false, 365)] }),
+    buildRenewal({ id: 'a06', tenant: { firstName: 'Amanda', lastName: 'Foster', email: 'afoster@icloud.com', phone: '(303) 554-8823' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(303) 300-1006', requiresApproval: true }, property: { address: '1847 Pearl St', city: 'Denver', state: 'CO', zip: '80302', type: 'single_family' }, portfolio: 'legacy', currentRent: 2350, proposedRent: 2420, leaseEndDaysFromToday: 42, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a06-1', 'Monthly Rent', 2350, true, 365)] }),
+    buildRenewal({ id: 'a07', tenant: { firstName: 'Derek', lastName: 'Washington', email: 'dwash@email.com', phone: '(713) 330-9944' }, owner: { firstName: 'Nancy', lastName: 'Powell', email: 'npowell@sunriseprop.com', phone: '(713) 300-1007', requiresApproval: false }, property: { address: '6221 Bellaire Blvd', city: 'Houston', state: 'TX', zip: '77081', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1550, proposedRent: 1612, leaseEndDaysFromToday: 48, proposedTerm: NewTermOption.SIX_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 15, charges: [charge('c-a07-1', 'Monthly Rent', 1550, true, 365)] }),
+    buildRenewal({ id: 'a08', tenant: { firstName: 'Rachel', lastName: 'Martinez', email: 'rachel.m@gmail.com', phone: '(505) 442-7761' }, owner: { firstName: 'Tom', lastName: 'Bradley', email: 'tbradley@metrorent.com', phone: '(505) 300-1008', requiresApproval: false }, property: { address: '500 Marquette Ave NW', unitNumber: '3A', city: 'Albuquerque', state: 'NM', zip: '87102', type: 'apartment' }, portfolio: 'metro', currentRent: 995, proposedRent: 1035, leaseEndDaysFromToday: 55, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.COMPLETED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a08-1', 'Monthly Rent', 995, true, 365)] }),
+    buildRenewal({ id: 'a09', tenant: { firstName: 'Steven', lastName: 'Park', email: 's.park@outlook.com', phone: '(512) 887-3312' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(512) 300-1009', requiresApproval: true }, property: { address: '4102 South Lamar Blvd', city: 'Austin', state: 'TX', zip: '78704', type: 'duplex' }, portfolio: 'sunrise', currentRent: 1750, proposedRent: 1820, leaseEndDaysFromToday: 22, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.REQUIRES_ACTION, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-a09-1', 'Monthly Rent', 1750, true, 365), charge('c-a09-2', 'Lawn Care', 80, false, 365)] }),
+    buildRenewal({ id: 'a10', tenant: { firstName: 'Michelle', lastName: 'Brooks', email: 'mbrooks@yahoo.com', phone: '(720) 334-6654' }, owner: { firstName: 'Sandra', lastName: 'Kim', email: 's.kim@metrorent.com', phone: '(720) 300-1010', requiresApproval: false }, property: { address: '2400 17th St', unitNumber: '7C', city: 'Denver', state: 'CO', zip: '80202', type: 'apartment' }, portfolio: 'metro', currentRent: 1680, proposedRent: 1747, leaseEndDaysFromToday: 29, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OWNER_APPROVED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-a10-1', 'Monthly Rent', 1680, true, 365), charge('c-a10-2', 'Parking', 90, false, 365)] }),
+    buildRenewal({ id: 'a11', tenant: { firstName: 'Brian', lastName: 'Scott', email: 'bscott@gmail.com', phone: '(713) 221-5578' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-1011', requiresApproval: true }, property: { address: '9834 Katy Freeway', city: 'Houston', state: 'TX', zip: '77055', type: 'single_family' }, portfolio: 'legacy', currentRent: 1900, proposedRent: 1976, leaseEndDaysFromToday: 38, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a11-1', 'Monthly Rent', 1900, true, 365)] }),
+    buildRenewal({ id: 'a12', tenant: { firstName: 'Carol', lastName: 'Jenkins', email: 'carol.j@icloud.com', phone: '(505) 664-3321' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-1012', requiresApproval: false }, property: { address: '712 Rio Grande Blvd NW', city: 'Albuquerque', state: 'NM', zip: '87104', type: 'condo' }, portfolio: 'sunrise', currentRent: 1250, proposedRent: 1288, leaseEndDaysFromToday: 61, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.SIGNED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a12-1', 'Monthly Rent', 1250, true, 365)] }),
+    buildRenewal({ id: 'a13', tenant: { firstName: 'Daniel', lastName: 'Rivera', email: 'd.rivera@email.com', phone: '(512) 990-1123' }, owner: { firstName: 'Lisa', lastName: 'Chang', email: 'lchang@metrorent.com', phone: '(512) 300-1013', requiresApproval: false }, property: { address: '600 Nueces St', unitNumber: '2F', city: 'Austin', state: 'TX', zip: '78701', type: 'apartment' }, portfolio: 'metro', currentRent: 1395, proposedRent: 1451, leaseEndDaysFromToday: 44, proposedTerm: NewTermOption.SIX_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.CONDITIONAL, charges: [charge('c-a13-1', 'Monthly Rent', 1395, true, 365), charge('c-a13-2', 'Pet Fee', 55, false, 180)] }),
+    buildRenewal({ id: 'a14', tenant: { firstName: 'Susan', lastName: 'Taylor', email: 'staylor@yahoo.com', phone: '(303) 776-8890' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(303) 300-1014', requiresApproval: true }, property: { address: '3344 Speer Blvd', city: 'Denver', state: 'CO', zip: '80211', type: 'duplex' }, portfolio: 'legacy', currentRent: 2200, proposedRent: 2288, leaseEndDaysFromToday: 52, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a14-1', 'Monthly Rent', 2200, true, 365), charge('c-a14-2', 'Garage', 125, false, 365)] }),
+    buildRenewal({ id: 'a15', tenant: { firstName: 'Gary', lastName: 'Hernandez', email: 'ghernandez@outlook.com', phone: '(713) 445-2231' }, owner: { firstName: 'Nancy', lastName: 'Powell', email: 'npowell@sunriseprop.com', phone: '(713) 300-1015', requiresApproval: false }, property: { address: '7801 Westpark Dr', city: 'Houston', state: 'TX', zip: '77063', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1475, proposedRent: 1534, leaseEndDaysFromToday: 66, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-a15-1', 'Monthly Rent', 1475, true, 365)] }),
+    buildRenewal({ id: 'a16', tenant: { firstName: 'Lisa', lastName: 'Patel', email: 'lpatel@gmail.com', phone: '(505) 332-9087' }, owner: { firstName: 'Tom', lastName: 'Bradley', email: 'tbradley@metrorent.com', phone: '(505) 300-1016', requiresApproval: false }, property: { address: '100 Gold Ave SW', unitNumber: '8B', city: 'Albuquerque', state: 'NM', zip: '87102', type: 'apartment' }, portfolio: 'metro', currentRent: 1125, proposedRent: 1158, leaseEndDaysFromToday: 71, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.COMPLETED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-a16-1', 'Monthly Rent', 1125, true, 365)] }),
+];
+
+// ── GROUP B: OVERLAP RISK RECORDS (6) ──────────────────────
+export const MOCK_RENEWALS_B: LeaseRenewal[] = [
+    buildRenewal({ id: 'b01', tenant: { firstName: 'Thomas', lastName: 'Mitchell', email: 'tmitchell@email.com', phone: '(512) 553-7741' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(512) 300-2001', requiresApproval: true }, property: { address: '1923 Barton Springs Rd', city: 'Austin', state: 'TX', zip: '78704', type: 'single_family' }, portfolio: 'sunrise', currentRent: 2050, proposedRent: 2132, leaseEndDaysFromToday: 14, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, hasOverlap: true, charges: [charge('c-b01-1', 'Monthly Rent', 2050, true, 730), charge('c-b01-2', 'Pet Fee', 75, false, 730)] }),
+    buildRenewal({ id: 'b02', tenant: { firstName: 'Angela', lastName: 'Moore', email: 'angela.moore@yahoo.com', phone: '(303) 667-4412' }, owner: { firstName: 'Sandra', lastName: 'Kim', email: 's.kim@metrorent.com', phone: '(303) 300-2002', requiresApproval: false }, property: { address: '1550 Market St', unitNumber: '5D', city: 'Denver', state: 'CO', zip: '80202', type: 'apartment' }, portfolio: 'metro', currentRent: 1580, proposedRent: 1643, leaseEndDaysFromToday: 9, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, hasOverlap: true, charges: [charge('c-b02-1', 'Monthly Rent', 1580, true, 365), charge('c-b02-2', 'Parking', 80, false, 365)] }),
+    buildRenewal({ id: 'b03', tenant: { firstName: 'Raymond', lastName: 'Garcia', email: 'rgarcia@outlook.com', phone: '(713) 884-5530' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-2003', requiresApproval: true }, property: { address: '3300 Buffalo Speedway', city: 'Houston', state: 'TX', zip: '77098', type: 'duplex' }, portfolio: 'legacy', currentRent: 1780, proposedRent: 1851, leaseEndDaysFromToday: 19, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.REQUIRES_ACTION, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 10, hasOverlap: true, charges: [charge('c-b03-1', 'Monthly Rent', 1780, true, 365)] }),
+    buildRenewal({ id: 'b04', tenant: { firstName: 'Donna', lastName: 'White', email: 'donna.white@gmail.com', phone: '(505) 773-2298' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-2004', requiresApproval: false }, property: { address: '2211 Mountain Rd NW', city: 'Albuquerque', state: 'NM', zip: '87104', type: 'condo' }, portfolio: 'sunrise', currentRent: 1320, proposedRent: 1373, leaseEndDaysFromToday: 26, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, hasOverlap: true, charges: [charge('c-b04-1', 'Monthly Rent', 1320, true, 365), charge('c-b04-2', 'Storage', 40, false, 180)] }),
+    buildRenewal({ id: 'b05', tenant: { firstName: 'Frank', lastName: 'Robinson', email: 'frank.r@icloud.com', phone: '(512) 221-8874' }, owner: { firstName: 'Lisa', lastName: 'Chang', email: 'lchang@metrorent.com', phone: '(512) 300-2005', requiresApproval: false }, property: { address: '400 West 2nd St', unitNumber: '9A', city: 'Austin', state: 'TX', zip: '78701', type: 'apartment' }, portfolio: 'metro', currentRent: 1890, proposedRent: 1965, leaseEndDaysFromToday: 11, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, hasOverlap: true, charges: [charge('c-b05-1', 'Monthly Rent', 1890, true, 365), charge('c-b05-2', 'Covered Parking', 110, false, 365), charge('c-b05-3', 'Pet Fee', 60, false, 365)] }),
+    buildRenewal({ id: 'b06', tenant: { firstName: 'Nancy', lastName: 'Adams', email: 'nadams@yahoo.com', phone: '(303) 445-6612' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(303) 300-2006', requiresApproval: true }, property: { address: '4417 Tennyson St', city: 'Denver', state: 'CO', zip: '80212', type: 'single_family' }, portfolio: 'legacy', currentRent: 2280, proposedRent: 2371, leaseEndDaysFromToday: 17, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, hasOverlap: true, charges: [charge('c-b06-1', 'Monthly Rent', 2280, true, 730), charge('c-b06-2', 'Lawn Care', 95, false, 365)] }),
+];
+
+// ── GROUP C: CAMPUS / SEASONAL RECORDS (8) ─────────────────
+const campusOwner = { firstName: 'University Housing', lastName: 'LLC', email: 'uhousing@campus.com', phone: '(512) 300-3000', requiresApproval: false };
+export const MOCK_RENEWALS_C: LeaseRenewal[] = [
+    buildRenewal({ id: 'c01', tenant: { firstName: 'Alex', lastName: 'Chen', email: 'alex.chen@university.edu', phone: '(512) 334-2211' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '101', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 875, proposedRent: 920, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c01-1', 'Monthly Rent', 875, true, 240)] }),
+    buildRenewal({ id: 'c02', tenant: { firstName: 'Megan', lastName: 'Sullivan', email: 'meg.sullivan@university.edu', phone: '(512) 887-4432' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '102', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 875, proposedRent: 920, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c02-1', 'Monthly Rent', 875, true, 240)] }),
+    buildRenewal({ id: 'c03', tenant: { firstName: 'Tyler', lastName: 'Brooks', email: 't.brooks@university.edu', phone: '(512) 663-9901' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '103', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 895, proposedRent: 941, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c03-1', 'Monthly Rent', 895, true, 240)] }),
+    buildRenewal({ id: 'c04', tenant: { firstName: 'Samantha', lastName: 'Lee', email: 'sam.lee@university.edu', phone: '(512) 774-3345' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '201', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 925, proposedRent: 972, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c04-1', 'Monthly Rent', 925, true, 240)] }),
+    buildRenewal({ id: 'c05', tenant: { firstName: 'Jordan', lastName: 'Rivera', email: 'j.rivera@university.edu', phone: '(512) 990-5566' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '202', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 925, proposedRent: 963, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c05-1', 'Monthly Rent', 925, true, 240)] }),
+    buildRenewal({ id: 'c06', tenant: { firstName: 'Chloe', lastName: 'Park', email: 'chloe.p@university.edu', phone: '(512) 553-1122' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '203', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 950, proposedRent: 988, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c06-1', 'Monthly Rent', 950, true, 240)] }),
+    buildRenewal({ id: 'c07', tenant: { firstName: 'Brandon', lastName: 'White', email: 'b.white@university.edu', phone: '(512) 221-7744' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '204', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 950, proposedRent: 998, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c07-1', 'Monthly Rent', 950, true, 240)] }),
+    buildRenewal({ id: 'c08', tenant: { firstName: 'Emma', lastName: 'Johnson', email: 'emma.j@university.edu', phone: '(512) 445-8821' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '205', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 975, proposedRent: 1024, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-c08-1', 'Monthly Rent', 975, true, 240)] }),
+];
+
+// ── GROUP D: MTM EDGE CASES (8) ───────────────────────────
+export const MOCK_RENEWALS_D: LeaseRenewal[] = [
+    buildRenewal({ id: 'd01', tenant: { firstName: 'Gloria', lastName: 'Turner', email: 'gloria.t@gmail.com', phone: '(720) 334-9981' }, owner: { firstName: 'Sandra', lastName: 'Kim', email: 's.kim@metrorent.com', phone: '(720) 300-4001', requiresApproval: false }, property: { address: '900 Grant St', unitNumber: '2A', city: 'Denver', state: 'CO', zip: '80203', type: 'apartment' }, portfolio: 'metro', currentRent: 1460, proposedRent: 1460, leaseEndDaysFromToday: 28, proposedTerm: NewTermOption.MONTH_TO_MONTH, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-d01-1', 'Monthly Rent', 1460, true, 365)] }),
+    buildRenewal({ id: 'd02', tenant: { firstName: 'Harold', lastName: 'Lewis', email: 'harold.l@yahoo.com', phone: '(512) 881-3312' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(512) 300-4002', requiresApproval: true }, property: { address: '5023 Duval St', city: 'Austin', state: 'TX', zip: '78751', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1700, proposedRent: 1870, leaseEndDaysFromToday: 33, proposedTerm: NewTermOption.MONTH_TO_MONTH, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.REQUIRES_ACTION, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 10, charges: [charge('c-d02-1', 'Monthly Rent', 1700, true, 365)] }),
+    buildRenewal({ id: 'd03', tenant: { firstName: 'Irene', lastName: 'Cox', email: 'irene.cox@icloud.com', phone: '(505) 667-4453' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-4003', requiresApproval: false }, property: { address: '700 Lomas Blvd NE', unitNumber: '4C', city: 'Albuquerque', state: 'NM', zip: '87102', type: 'apartment' }, portfolio: 'sunrise', currentRent: 1050, proposedRent: 1050, leaseEndDaysFromToday: 21, proposedTerm: NewTermOption.MONTH_TO_MONTH, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-d03-1', 'Monthly Rent', 1050, true, 365)] }),
+    buildRenewal({ id: 'd04', tenant: { firstName: 'James', lastName: 'Murray', email: 'j.murray@outlook.com', phone: '(713) 553-7761' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-4004', requiresApproval: false }, property: { address: '4441 Montrose Blvd', city: 'Houston', state: 'TX', zip: '77006', type: 'condo' }, portfolio: 'legacy', currentRent: 1920, proposedRent: 1920, leaseEndDaysFromToday: 16, proposedTerm: NewTermOption.MONTH_TO_MONTH, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.CONDITIONAL, charges: [charge('c-d04-1', 'Monthly Rent', 1920, true, 365)] }),
+    buildRenewal({ id: 'd05', tenant: { firstName: 'Karen', lastName: 'Bell', email: 'k.bell@email.com', phone: '(303) 221-4455' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(303) 300-4005', requiresApproval: true }, property: { address: '1801 Wewatta St', city: 'Denver', state: 'CO', zip: '80202', type: 'apartment' }, portfolio: 'legacy', currentRent: 1540, proposedRent: 1602, leaseEndDaysFromToday: 39, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 12, charges: [charge('c-d05-1', 'Monthly Rent', 1540, true, 365)] }),
+    buildRenewal({ id: 'd06', tenant: { firstName: 'Larry', lastName: 'Young', email: 'lyoung@gmail.com', phone: '(512) 445-6677' }, owner: { firstName: 'Lisa', lastName: 'Chang', email: 'lchang@metrorent.com', phone: '(512) 300-4006', requiresApproval: false }, property: { address: '1100 S Congress Ave', city: 'Austin', state: 'TX', zip: '78704', type: 'condo' }, portfolio: 'metro', currentRent: 1380, proposedRent: 1421, leaseEndDaysFromToday: 57, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.SIGNED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-d06-1', 'Monthly Rent', 1380, true, 365)] }),
+    buildRenewal({ id: 'd07', tenant: { firstName: 'Monica', lastName: 'Reed', email: 'mreed@yahoo.com', phone: '(713) 998-3344' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-4007', requiresApproval: true }, property: { address: '2727 Kirby Dr', city: 'Houston', state: 'TX', zip: '77098', type: 'duplex' }, portfolio: 'legacy', currentRent: 1820, proposedRent: 1893, leaseEndDaysFromToday: 34, proposedTerm: NewTermOption.SIX_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.CONDITIONAL, charges: [charge('c-d07-1', 'Monthly Rent', 1820, true, 365)] }),
+    buildRenewal({ id: 'd08', tenant: { firstName: 'Nathan', lastName: 'Price', email: 'nprice@outlook.com', phone: '(505) 776-9988' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-4008', requiresApproval: false }, property: { address: '400 Lomas Blvd NW', city: 'Albuquerque', state: 'NM', zip: '87102', type: 'condo' }, portfolio: 'sunrise', currentRent: 1150, proposedRent: 1196, leaseEndDaysFromToday: 46, proposedTerm: NewTermOption.TWENTY_FOUR_MONTHS, status: RenewalStatus.OWNER_APPROVED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-d08-1', 'Monthly Rent', 1150, true, 365)] }),
+];
+
+// ── GROUP E: EDGE CASES (8) ───────────────────────────────
+export const MOCK_RENEWALS_E: LeaseRenewal[] = [
+    buildRenewal({ id: 'e01', tenant: { firstName: 'Bartholomew', lastName: "Krishnamurthy-O'Sullivan", email: 'b.krishnamurthy.osullivan@longdomainname-corp.com', phone: '(303) 112-3344' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(303) 300-5001', requiresApproval: true }, property: { address: '123 Main St', city: 'Denver', state: 'CO', zip: '80201', type: 'single_family' }, portfolio: 'legacy', currentRent: 1600, proposedRent: 1664, leaseEndDaysFromToday: 45, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.PENDING, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-e01-1', 'Monthly Rent', 1600, true, 365)] }),
+    buildRenewal({ id: 'e02', tenant: { firstName: 'James', lastName: 'Short', email: 'j.short@email.com', phone: '(713) 554-2211' }, owner: { firstName: 'Tom', lastName: 'Bradley', email: 'tbradley@metrorent.com', phone: '(713) 300-5002', requiresApproval: false }, property: { address: '14200 Southwest Freeway Service Rd', unitNumber: '12B (Building C)', city: 'Houston', state: 'TX', zip: '77478', type: 'apartment' }, portfolio: 'metro', currentRent: 1150, proposedRent: 1196, leaseEndDaysFromToday: 33, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-e02-1', 'Monthly Rent', 1150, true, 365)] }),
+    buildRenewal({ id: 'e03', tenant: { firstName: 'Alice', lastName: 'Chen', email: 'alice.chen@email.com', phone: '(512) 889-4411' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(512) 300-5003', requiresApproval: true }, property: { address: '901 First St', city: 'Austin', state: 'TX', zip: '78703', type: 'condo' }, portfolio: 'sunrise', currentRent: 1875, proposedRent: 1950, leaseEndDaysFromToday: 3, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.REQUIRES_ACTION, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-e03-1', 'Monthly Rent', 1875, true, 365)] }),
+    buildRenewal({ id: 'e04', tenant: { firstName: 'Bob', lastName: 'Dunn', email: 'bob.dunn@email.com', phone: '(303) 667-8899' }, owner: { firstName: 'Sandra', lastName: 'Kim', email: 's.kim@metrorent.com', phone: '(303) 300-5004', requiresApproval: false }, property: { address: '300 4th St', unitNumber: '6A', city: 'Denver', state: 'CO', zip: '80204', type: 'apartment' }, portfolio: 'metro', currentRent: 1350, proposedRent: 1350, leaseEndDaysFromToday: -5, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-e04-1', 'Monthly Rent', 1350, true, 365)] }),
+    buildRenewal({ id: 'e05', tenant: { firstName: 'Carol', lastName: 'Smith', email: 'carol.smith@email.com', phone: '(713) 332-4455' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-5005', requiresApproval: true }, property: { address: '1100 W Gray St', city: 'Houston', state: 'TX', zip: '77019', type: 'duplex' }, portfolio: 'legacy', currentRent: 2100, proposedRent: 1995, leaseEndDaysFromToday: 55, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.TENANT_RESPONDED, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-e05-1', 'Monthly Rent', 2100, true, 365)] }),
+    buildRenewal({ id: 'e06', tenant: { firstName: 'David', lastName: 'Brown', email: 'd.brown@email.com', phone: '(210) 554-7788' }, owner: { firstName: 'Nancy', lastName: 'Powell', email: 'npowell@sunriseprop.com', phone: '(210) 300-5006', requiresApproval: false }, property: { address: '4400 N Loop 1604', city: 'San Antonio', state: 'TX', zip: '78249', type: 'single_family' }, portfolio: 'sunrise', currentRent: 2400, proposedRent: 2496, leaseEndDaysFromToday: 40, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.OFFER_SENT, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, hasOverlap: true, charges: [charge('c-e06-1', 'Monthly Rent', 2400, true, 365), charge('c-e06-2', 'Pet Fee (Dog)', 75, false, 365), charge('c-e06-3', 'Pet Fee (Cat)', 50, false, 365), charge('c-e06-4', 'Covered Parking', 125, false, 365), charge('c-e06-5', 'Pool Access', 45, false, 365)] }),
+    buildRenewal({ id: 'e07', tenant: { firstName: 'Eve', lastName: 'Davis', email: 'eve.davis@email.com', phone: '(713) 775-3322' }, owner: { firstName: 'Michael', lastName: 'Torres', email: 'm.torres@legacyre.com', phone: '(713) 300-5007', requiresApproval: true }, property: { address: '6612 Richmond Ave', city: 'Houston', state: 'TX', zip: '77057', type: 'condo' }, portfolio: 'legacy', currentRent: 1750, proposedRent: 1820, leaseEndDaysFromToday: 15, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.PENDING, ownerApproval: OwnerApprovalStatus.REQUIRES_ACTION, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-e07-1', 'Monthly Rent', 1750, true, 365)] }),
+    buildRenewal({ id: 'e08', tenant: { firstName: 'Frank', lastName: 'Wu', email: 'frank.wu@email.com', phone: '(512) 998-1122' }, owner: campusOwner, property: { address: '2200 Speedway', unitNumber: '301', city: 'Austin', state: 'TX', zip: '78705', type: 'apartment' }, portfolio: 'campus', currentRent: 1050, proposedRent: 1050, leaseEndDaysFromToday: 138, proposedTerm: NewTermOption.TWENTY_FOUR_MONTHS, status: RenewalStatus.SIGNED, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-e08-1', 'Monthly Rent', 1050, true, 240)] }),
+];
+
+// ── GROUP F: VACATING RECORDS (6) ─────────────────────────
+export const MOCK_RENEWALS_F: LeaseRenewal[] = [
+    buildRenewal({ id: 'f01', tenant: { firstName: 'Victor', lastName: 'Morales', email: 'vmorales@email.com', phone: '(505) 443-5511' }, owner: { firstName: 'James', lastName: 'Wilson', email: 'jwilson@sunriseprop.com', phone: '(505) 300-6001', requiresApproval: false }, property: { address: '204 E Palace Ave', city: 'Santa Fe', state: 'NM', zip: '87501', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1650, proposedRent: 1650, leaseEndDaysFromToday: 10, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-f01-1', 'Monthly Rent', 1650, true, 365)] }),
+    buildRenewal({ id: 'f02', tenant: { firstName: 'Sandra', lastName: 'Collins', email: 'scollins@gmail.com', phone: '(719) 332-8874' }, owner: { firstName: 'Nancy', lastName: 'Powell', email: 'npowell@sunriseprop.com', phone: '(719) 300-6002', requiresApproval: false }, property: { address: '2155 Cheyenne Blvd', city: 'Colorado Springs', state: 'CO', zip: '80906', type: 'duplex' }, portfolio: 'sunrise', currentRent: 1400, proposedRent: 1400, leaseEndDaysFromToday: 18, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-f02-1', 'Monthly Rent', 1400, true, 365)] }),
+    buildRenewal({ id: 'f03', tenant: { firstName: 'Tony', lastName: 'Perez', email: 'tperez@yahoo.com', phone: '(210) 887-2231' }, owner: { firstName: 'Tom', lastName: 'Bradley', email: 'tbradley@metrorent.com', phone: '(210) 300-6003', requiresApproval: false }, property: { address: '5900 NW Loop 410', city: 'San Antonio', state: 'TX', zip: '78238', type: 'apartment' }, portfolio: 'metro', currentRent: 1275, proposedRent: 1275, leaseEndDaysFromToday: 25, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.PREMIUM, mtmPremiumPercent: 10, charges: [charge('c-f03-1', 'Monthly Rent', 1275, true, 365)] }),
+    buildRenewal({ id: 'f04', tenant: { firstName: 'Rebecca', lastName: 'Grant', email: 'rgrant@icloud.com', phone: '(505) 665-7742' }, owner: { firstName: 'Robert', lastName: 'Chen', email: 'rchen@legacyre.com', phone: '(505) 300-6004', requiresApproval: true }, property: { address: '415 Don Gaspar Ave', city: 'Santa Fe', state: 'NM', zip: '87501', type: 'condo' }, portfolio: 'legacy', currentRent: 1525, proposedRent: 1525, leaseEndDaysFromToday: 32, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.APPROVED, mtmPolicy: MTMPolicy.CONDITIONAL, charges: [charge('c-f04-1', 'Monthly Rent', 1525, true, 365)] }),
+    buildRenewal({ id: 'f05', tenant: { firstName: 'Wayne', lastName: 'Harris', email: 'wharris@email.com', phone: '(719) 221-9908' }, owner: { firstName: 'David', lastName: 'Park', email: 'david.park@sunriseprop.com', phone: '(719) 300-6005', requiresApproval: true }, property: { address: '3650 N Academy Blvd', city: 'Colorado Springs', state: 'CO', zip: '80917', type: 'single_family' }, portfolio: 'sunrise', currentRent: 1800, proposedRent: 1800, leaseEndDaysFromToday: 45, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.ALLOWED, charges: [charge('c-f05-1', 'Monthly Rent', 1800, true, 365)] }),
+    buildRenewal({ id: 'f06', tenant: { firstName: 'Diana', lastName: 'Long', email: 'dlong@outlook.com', phone: '(210) 443-6612' }, owner: { firstName: 'Lisa', lastName: 'Chang', email: 'lchang@metrorent.com', phone: '(210) 300-6006', requiresApproval: false }, property: { address: '7959 Fredericksburg Rd', city: 'San Antonio', state: 'TX', zip: '78229', type: 'apartment' }, portfolio: 'metro', currentRent: 1100, proposedRent: 1100, leaseEndDaysFromToday: 14, proposedTerm: NewTermOption.TWELVE_MONTHS, status: RenewalStatus.VACATING, ownerApproval: OwnerApprovalStatus.NOT_REQUIRED, mtmPolicy: MTMPolicy.FORBIDDEN, charges: [charge('c-f06-1', 'Monthly Rent', 1100, true, 365)] }),
+];
+
+// ── FULL COMBINED DATASET ─────────────────────────────────
 export const MOCK_RENEWALS: LeaseRenewal[] = [
-    {
-        id: 'r1',
-        leaseId: 'l1',
-        property: {
-            id: 'prop1',
-            address: '1242 E 4th St',
-            unitNumber: '4B',
-            city: 'Austin',
-            state: 'TX',
-            zip: '78701',
-            portfolioId: 'p1',
-            portfolioName: 'Sunrise Properties',
-            propertyType: 'apartment'
-        },
-        tenant: {
-            id: 't1',
-            firstName: 'Marisol',
-            lastName: 'Esparza',
-            email: 'm.esparza@example.com',
-            phone: '512-555-0192',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o1',
-            firstName: 'Robert',
-            lastName: 'Chen',
-            email: 'rchen@owner-group.com',
-            phone: '512-555-9988',
-            requiresApproval: true
-        },
-        currentRent: 1850,
-        leaseEndDate: '2025-04-10',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 1942, // ~5% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.PENDING,
-        ownerApprovalStatus: OwnerApprovalStatus.PENDING,
-        mtmPolicy: MTMPolicy.ALLOWED,
-        currentCharges: [
-            { id: 'c1', label: 'Monthly Rent', amount: 1850, frequency: 'monthly', startDate: '2024-04-10', isRentCharge: true },
-            { id: 'c2', label: 'Parking Space', amount: 75, frequency: 'monthly', startDate: '2024-04-10', isRentCharge: false }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c1', label: 'Monthly Rent', amount: 1850, frequency: 'monthly', startDate: '2024-04-10', isRentCharge: true },
-                { id: 'c2', label: 'Parking Space', amount: 75, frequency: 'monthly', startDate: '2024-04-10', isRentCharge: false }
-            ],
-            proposedRentAmount: 1942,
-            proposedStartDate: '2025-04-11',
-            hasOverlap: false,
-            netMonthlyChange: 92,
-            confirmed: false
-        },
-        offers: [],
-        createdAt: '2025-02-15T09:00:00Z',
-        updatedAt: '2025-03-01T14:30:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r2',
-        leaseId: 'l2',
-        property: {
-            id: 'prop2',
-            address: '882 High Vista Ln',
-            city: 'Denver',
-            state: 'CO',
-            zip: '80202',
-            portfolioId: 'p2',
-            portfolioName: 'Metro Rentals Group',
-            propertyType: 'single_family'
-        },
-        tenant: {
-            id: 't2',
-            firstName: 'Liam',
-            lastName: 'Hansen',
-            email: 'liamh@gmail.com',
-            phone: '303-555-0433',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o2',
-            firstName: 'Sarah',
-            lastName: 'Vance',
-            email: 'svance@rentvine.com',
-            phone: '303-555-1122',
-            requiresApproval: false
-        },
-        currentRent: 2450,
-        leaseEndDate: '2025-05-15',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 2621, // ~7% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.OFFER_SENT,
-        ownerApprovalStatus: OwnerApprovalStatus.APPROVED,
-        mtmPolicy: MTMPolicy.PREMIUM,
-        mtmPremiumPercent: 10,
-        currentCharges: [
-            { id: 'c3', label: 'Monthly Rent', amount: 2450, frequency: 'monthly', startDate: '2024-05-15', isRentCharge: true },
-            { id: 'c4', label: 'Pet Fee (Tucker)', amount: 50, frequency: 'monthly', startDate: '2024-05-15', isRentCharge: false }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c3', label: 'Monthly Rent', amount: 2450, frequency: 'monthly', startDate: '2024-05-15', isRentCharge: true },
-                { id: 'c4', label: 'Pet Fee (Tucker)', amount: 50, frequency: 'monthly', startDate: '2024-05-15', isRentCharge: false }
-            ],
-            proposedRentAmount: 2621,
-            proposedStartDate: '2025-05-16',
-            hasOverlap: false,
-            netMonthlyChange: 171,
-            confirmed: false
-        },
-        offers: [
-            { id: 'off1', offeredRent: 2621, offeredTerm: NewTermOption.TWELVE_MONTHS, offerSentAt: '2025-03-10T11:00:00Z' }
-        ],
-        createdAt: '2025-02-10T08:00:00Z',
-        updatedAt: '2025-03-10T11:00:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r3',
-        leaseId: 'l3',
-        property: {
-            id: 'prop3',
-            address: '401 Central Ave NW',
-            unitNumber: 'Penthouse A',
-            city: 'Albuquerque',
-            state: 'NM',
-            zip: '87102',
-            portfolioId: 'p2',
-            portfolioName: 'Metro Rentals Group',
-            propertyType: 'apartment'
-        },
-        tenant: {
-            id: 't3',
-            firstName: 'Elena',
-            lastName: 'Rodriguez',
-            email: 'e.rodriguez@outlook.com',
-            phone: '505-555-8821',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o3',
-            firstName: 'Mark',
-            lastName: 'Wyman',
-            email: 'mwyman@private-equity.com',
-            phone: '505-555-3399',
-            requiresApproval: true
-        },
-        currentRent: 1350,
-        leaseEndDate: '2025-04-05',
-        currentTerm: NewTermOption.SIX_MONTHS,
-        proposedRent: 1404, // ~4% increase
-        proposedTerm: NewTermOption.SIX_MONTHS,
-        status: RenewalStatus.TENANT_RESPONDED,
-        ownerApprovalStatus: OwnerApprovalStatus.APPROVED,
-        mtmPolicy: MTMPolicy.FORBIDDEN,
-        currentCharges: [
-            { id: 'c5', label: 'Monthly Rent', amount: 1350, frequency: 'monthly', startDate: '2024-10-05', isRentCharge: true }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c5', label: 'Monthly Rent', amount: 1350, frequency: 'monthly', startDate: '2024-10-05', isRentCharge: true }
-            ],
-            proposedRentAmount: 1404,
-            proposedStartDate: '2025-04-06',
-            hasOverlap: false,
-            netMonthlyChange: 54,
-            confirmed: false
-        },
-        offers: [
-            { id: 'off2', offeredRent: 1431, offeredTerm: NewTermOption.SIX_MONTHS, offerSentAt: '2025-03-01T09:00:00Z', tenantResponse: 'counter', notes: 'Tenant asked for lower increase.' }
-        ],
-        createdAt: '2025-02-05T10:00:00Z',
-        updatedAt: '2025-03-08T16:20:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r4',
-        leaseId: 'l4',
-        property: {
-            id: 'prop4',
-            address: '1502 West Loop South',
-            city: 'Houston',
-            state: 'TX',
-            zip: '77027',
-            portfolioId: 'p1',
-            portfolioName: 'Sunrise Properties',
-            propertyType: 'condo'
-        },
-        tenant: {
-            id: 't4',
-            firstName: 'Marcus',
-            lastName: 'Thorne',
-            email: 'mthorne@energy-corp.com',
-            phone: '713-555-0988',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o4',
-            firstName: 'Angela',
-            lastName: 'Bass',
-            email: 'angela.bass@realty-invest.com',
-            phone: '713-555-4422',
-            requiresApproval: true
-        },
-        currentRent: 2150,
-        leaseEndDate: '2025-05-20',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 2322, // ~8% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.PENDING,
-        ownerApprovalStatus: OwnerApprovalStatus.REQUIRES_ACTION,
-        mtmPolicy: MTMPolicy.ALLOWED,
-        currentCharges: [
-            { id: 'c6', label: 'Monthly Rent', amount: 2150, frequency: 'monthly', startDate: '2024-05-20', isRentCharge: true },
-            { id: 'c7', label: 'Storage Unit B7', amount: 45, frequency: 'monthly', startDate: '2024-05-20', isRentCharge: false }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c6', label: 'Monthly Rent', amount: 2150, frequency: 'monthly', startDate: '2024-05-20', isRentCharge: true },
-                { id: 'c7', label: 'Storage Unit B7', amount: 45, frequency: 'monthly', startDate: '2024-05-20', isRentCharge: false }
-            ],
-            proposedRentAmount: 2322,
-            proposedStartDate: '2025-05-21',
-            hasOverlap: false,
-            netMonthlyChange: 172,
-            confirmed: false
-        },
-        offers: [],
-        createdAt: '2025-03-01T11:00:00Z',
-        updatedAt: '2025-03-12T10:15:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r5',
-        leaseId: 'l5',
-        property: {
-            id: 'prop5',
-            address: '229 Palace Ave',
-            city: 'Santa Fe',
-            state: 'NM',
-            zip: '87501',
-            portfolioId: 'p2',
-            portfolioName: 'Metro Rentals Group',
-            propertyType: 'duplex'
-        },
-        tenant: {
-            id: 't5',
-            firstName: 'Isabella',
-            lastName: 'Quinn',
-            email: 'iquinn@arts-council.org',
-            phone: '505-555-1212',
-            portalAccessEnabled: false
-        },
-        owner: {
-            id: 'o5',
-            firstName: 'David',
-            lastName: 'Sterling',
-            email: 'dsterling@family-trust.com',
-            phone: '505-555-6677',
-            requiresApproval: false
-        },
-        currentRent: 1625,
-        leaseEndDate: '2025-04-25',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 1722, // ~6% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.SIGNED,
-        ownerApprovalStatus: OwnerApprovalStatus.NOT_REQUIRED,
-        mtmPolicy: MTMPolicy.ALLOWED,
-        currentCharges: [
-            { id: 'c8', label: 'Monthly Rent', amount: 1625, frequency: 'monthly', startDate: '2024-04-25', isRentCharge: true }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c8', label: 'Monthly Rent', amount: 1625, frequency: 'monthly', startDate: '2024-04-25', isRentCharge: true }
-            ],
-            proposedRentAmount: 1722,
-            proposedStartDate: '2025-04-26',
-            hasOverlap: false,
-            netMonthlyChange: 97,
-            confirmed: true
-        },
-        offers: [
-            { id: 'off3', offeredRent: 1722, offeredTerm: NewTermOption.TWELVE_MONTHS, offerSentAt: '2025-02-20T14:00:00Z', tenantResponse: 'accepted', tenantRespondedAt: '2025-03-05T10:30:00Z' }
-        ],
-        createdAt: '2025-01-20T09:00:00Z',
-        updatedAt: '2025-03-07T12:00:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r6',
-        leaseId: 'l6',
-        property: {
-            id: 'prop6',
-            address: '772 Garden of the Gods Rd',
-            city: 'Colorado Springs',
-            state: 'CO',
-            zip: '80907',
-            portfolioId: 'p1',
-            portfolioName: 'Sunrise Properties',
-            propertyType: 'single_family'
-        },
-        tenant: {
-            id: 't6',
-            firstName: 'Jackson',
-            lastName: 'Miller',
-            email: 'jax.miller@tech-pros.io',
-            phone: '719-555-0011',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o6',
-            firstName: 'Nancy',
-            lastName: 'Wheeler',
-            email: 'nw@private-rentals.com',
-            phone: '719-555-2233',
-            requiresApproval: false
-        },
-        currentRent: 1975,
-        leaseEndDate: '2025-05-10',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 2073, // ~5% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.PENDING,
-        ownerApprovalStatus: OwnerApprovalStatus.PENDING,
-        mtmPolicy: MTMPolicy.PREMIUM,
-        mtmPremiumPercent: 10,
-        currentCharges: [
-            { id: 'c9', label: 'Monthly Rent', amount: 1975, frequency: 'monthly', startDate: '2024-05-10', isRentCharge: true },
-            { id: 'c10', label: 'Landscaping Fee', amount: 40, frequency: 'monthly', startDate: '2024-05-10', isRentCharge: false }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c9', label: 'Monthly Rent', amount: 1975, frequency: 'monthly', startDate: '2024-05-10', isRentCharge: true },
-                { id: 'c10', label: 'Landscaping Fee', amount: 40, frequency: 'monthly', startDate: '2024-05-10', isRentCharge: false }
-            ],
-            proposedRentAmount: 2073,
-            proposedStartDate: '2025-05-11',
-            hasOverlap: true, // TEST OVERLAP UI
-            netMonthlyChange: 98,
-            confirmed: false
-        },
-        offers: [],
-        createdAt: '2025-03-05T08:00:00Z',
-        updatedAt: '2025-03-14T11:00:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r7',
-        leaseId: 'l7',
-        property: {
-            id: 'prop7',
-            address: '553 High St',
-            unitNumber: 'Apt 212',
-            city: 'Austin',
-            state: 'TX',
-            zip: '78701',
-            portfolioId: 'p2',
-            portfolioName: 'Metro Rentals Group',
-            propertyType: 'apartment'
-        },
-        tenant: {
-            id: 't7',
-            firstName: 'Chloe',
-            lastName: 'Smith',
-            email: 'chloe.s@startup-labs.com',
-            phone: '512-555-7733',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o7',
-            firstName: 'Tom',
-            lastName: 'Harrison',
-            email: 'tharrison@capital-mgmt.com',
-            phone: '512-555-8811',
-            requiresApproval: true
-        },
-        currentRent: 1475,
-        leaseEndDate: '2025-04-15',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 1534, // ~4% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.OFFER_SENT,
-        ownerApprovalStatus: OwnerApprovalStatus.APPROVED,
-        mtmPolicy: MTMPolicy.FORBIDDEN,
-        currentCharges: [
-            { id: 'c11', label: 'Monthly Rent', amount: 1475, frequency: 'monthly', startDate: '2024-04-15', isRentCharge: true }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c11', label: 'Monthly Rent', amount: 1475, frequency: 'monthly', startDate: '2024-04-15', isRentCharge: true }
-            ],
-            proposedRentAmount: 1534,
-            proposedStartDate: '2025-04-16',
-            hasOverlap: false,
-            netMonthlyChange: 59,
-            confirmed: false
-        },
-        offers: [
-            { id: 'off4', offeredRent: 1534, offeredTerm: NewTermOption.TWELVE_MONTHS, offerSentAt: '2025-03-12T10:00:00Z' }
-        ],
-        createdAt: '2025-02-15T09:00:00Z',
-        updatedAt: '2025-03-12T10:00:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r8',
-        leaseId: 'l8',
-        property: {
-            id: 'prop8',
-            address: '9211 Kirby Dr',
-            city: 'Houston',
-            state: 'TX',
-            zip: '77054',
-            portfolioId: 'p1',
-            portfolioName: 'Sunrise Properties',
-            propertyType: 'duplex'
-        },
-        tenant: {
-            id: 't8',
-            firstName: 'Derrick',
-            lastName: 'Wade',
-            email: 'dwade@logistics-plus.com',
-            phone: '832-555-0123',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o8',
-            firstName: 'Lisa',
-            lastName: 'Dumont',
-            email: 'ldumont@luxe-holdings.com',
-            phone: '832-555-4455',
-            requiresApproval: true
-        },
-        currentRent: 1250,
-        leaseEndDate: '2025-05-29',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 1337, // ~7% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.TENANT_RESPONDED,
-        ownerApprovalStatus: OwnerApprovalStatus.PENDING,
-        mtmPolicy: MTMPolicy.CONDITIONAL,
-        currentCharges: [
-            { id: 'c12', label: 'Monthly Rent', amount: 1250, frequency: 'monthly', startDate: '2024-05-29', isRentCharge: true },
-            { id: 'c13', label: 'Pet Fee (Simba)', amount: 25, frequency: 'monthly', startDate: '2024-05-29', isRentCharge: false }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c12', label: 'Monthly Rent', amount: 1250, frequency: 'monthly', startDate: '2024-05-29', isRentCharge: true },
-                { id: 'c13', label: 'Pet Fee (Simba)', amount: 25, frequency: 'monthly', startDate: '2024-05-29', isRentCharge: false }
-            ],
-            proposedRentAmount: 1337,
-            proposedStartDate: '2025-05-30',
-            hasOverlap: false,
-            netMonthlyChange: 87,
-            confirmed: false
-        },
-        offers: [
-            { id: 'off5', offeredRent: 1337, offeredTerm: NewTermOption.TWELVE_MONTHS, offerSentAt: '2025-03-05T09:00:00Z', tenantResponse: 'counter', notes: 'Tenant requested pet fee waive.' }
-        ],
-        createdAt: '2025-02-25T14:00:00Z',
-        updatedAt: '2025-03-11T16:45:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r9',
-        leaseId: 'l9',
-        property: {
-            id: 'prop9',
-            address: '142 Canyon View Rd',
-            city: 'Santa Fe',
-            state: 'NM',
-            zip: '87506',
-            portfolioId: 'p2',
-            portfolioName: 'Metro Rentals Group',
-            propertyType: 'single_family'
-        },
-        tenant: {
-            id: 't9',
-            firstName: 'Rachel',
-            lastName: 'Green',
-            email: 'rgreen@fashion-weekly.com',
-            phone: '505-555-0912',
-            portalAccessEnabled: true
-        },
-        owner: {
-            id: 'o9',
-            firstName: 'Phil',
-            lastName: 'Dunphy',
-            email: 'phil@modern-estates.com',
-            phone: '505-555-4433',
-            requiresApproval: false
-        },
-        currentRent: 2200,
-        leaseEndDate: '2025-04-18',
-        currentTerm: NewTermOption.TWELVE_MONTHS,
-        proposedRent: 2266, // ~3% increase
-        proposedTerm: NewTermOption.TWELVE_MONTHS,
-        status: RenewalStatus.OWNER_APPROVED,
-        ownerApprovalStatus: OwnerApprovalStatus.APPROVED,
-        mtmPolicy: MTMPolicy.FORBIDDEN,
-        currentCharges: [
-            { id: 'c14', label: 'Monthly Rent', amount: 2200, frequency: 'monthly', startDate: '2024-04-18', isRentCharge: true }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c14', label: 'Monthly Rent', amount: 2200, frequency: 'monthly', startDate: '2024-04-18', isRentCharge: true }
-            ],
-            proposedRentAmount: 2266,
-            proposedStartDate: '2025-04-19',
-            hasOverlap: true, // TEST OVERLAP UI
-            netMonthlyChange: 66,
-            confirmed: false
-        },
-        offers: [],
-        createdAt: '2025-02-18T10:00:00Z',
-        updatedAt: '2025-03-10T14:00:00Z',
-        isDirty: false,
-        isSelected: false
-    },
-    {
-        id: 'r10',
-        leaseId: 'l10',
-        property: {
-            id: 'prop10',
-            address: '331 Broadway Ave',
-            unitNumber: 'Suite 2',
-            city: 'Albuquerque',
-            state: 'NM',
-            zip: '87102',
-            portfolioId: 'p1',
-            portfolioName: 'Sunrise Properties',
-            propertyType: 'condo'
-        },
-        tenant: {
-            id: 't10',
-            firstName: 'Henry',
-            lastName: 'Cavill',
-            email: 'h.cavill@acting-studio.com',
-            phone: '505-555-1234',
-            portalAccessEnabled: false
-        },
-        owner: {
-            id: 'o10',
-            firstName: 'Bruce',
-            lastName: 'Wayne',
-            email: 'bwayne@wayne-corp.com',
-            phone: '505-555-6622',
-            requiresApproval: false
-        },
-        currentRent: 925,
-        leaseEndDate: '2025-05-05',
-        currentTerm: NewTermOption.SIX_MONTHS,
-        proposedRent: 980, // ~6% increase
-        proposedTerm: NewTermOption.SIX_MONTHS,
-        status: RenewalStatus.VACATING,
-        ownerApprovalStatus: OwnerApprovalStatus.NOT_REQUIRED,
-        mtmPolicy: MTMPolicy.ALLOWED,
-        currentCharges: [
-            { id: 'c15', label: 'Monthly Rent', amount: 925, frequency: 'monthly', startDate: '2024-11-05', isRentCharge: true }
-        ],
-        chargeTransition: {
-            existingCharges: [
-                { id: 'c15', label: 'Monthly Rent', amount: 925, frequency: 'monthly', startDate: '2024-11-05', isRentCharge: true }
-            ],
-            proposedRentAmount: 980,
-            proposedStartDate: '2025-05-06',
-            hasOverlap: false,
-            netMonthlyChange: 55,
-            confirmed: false
-        },
-        offers: [],
-        createdAt: '2025-03-01T08:00:00Z',
-        updatedAt: '2025-03-13T09:00:00Z',
-        isDirty: false,
-        isSelected: false
-    }
+    ...MOCK_RENEWALS_A,
+    ...MOCK_RENEWALS_B,
+    ...MOCK_RENEWALS_C,
+    ...MOCK_RENEWALS_D,
+    ...MOCK_RENEWALS_E,
+    ...MOCK_RENEWALS_F,
 ];
