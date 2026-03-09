@@ -1,5 +1,5 @@
+import type { LeaseRenewal } from './types';
 import {
-    LeaseRenewal,
     RenewalStatus,
     MTMPolicy,
     OwnerApprovalStatus,

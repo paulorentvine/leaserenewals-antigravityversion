@@ -1,4 +1,3 @@
-import React from 'react';
 import { LeaseRenewalsPage } from './features/leaseRenewals';
 
 /**
@@ -6,9 +5,7 @@ import { LeaseRenewalsPage } from './features/leaseRenewals';
  */
 function App() {
   return (
-    <React.StrictMode>
-      <LeaseRenewalsPage />
-    </React.StrictMode>
+    <LeaseRenewalsPage />
   );
 }
 
