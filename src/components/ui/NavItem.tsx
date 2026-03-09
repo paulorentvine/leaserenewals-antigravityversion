@@ -66,7 +66,7 @@ export const NavItem: React.FC<NavItemProps> = ({ item, collapsed, onToggle }) =
           w-full flex items-center px-2 py-1.5 text-sm rounded-md transition-colors duration-150 relative
           ${isActive && !hasChildren
                         ? 'text-white bg-[var(--sidebar-active)]'
-                        : 'text-neutral-muted hover:text-white hover:bg-[var(--sidebar-hover)]'}
+                        : 'text-sidebar-muted hover:text-white hover:bg-[var(--sidebar-hover)]'}
           focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)] outline-none
         `}
                 aria-expanded={hasChildren ? isOpen : undefined}
