@@ -12,6 +12,9 @@ import { useUndoStack } from './hooks/useUndoStack';
 import { useEditableGrid } from './hooks/useEditableGrid';
 import { useChargeGuardrails } from './hooks/useChargeGuardrails';
 import { ChargeGuardrailsModal } from './components/ChargeGuardrailsModal/ChargeGuardrailsModal';
+import { useMTMRules } from './hooks/useMTMRules';
+import { MTMRulesDrawer } from './components/MTMRulesDrawer/MTMRulesDrawer';
+import { RenewalSettingsTab } from './components/Settings/RenewalSettingsTab';
 import type {
     LeaseRenewal,
     RenewalFilters,
@@ -39,8 +42,12 @@ export const LeaseRenewalsPage: React.FC = () => {
     });
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [toastMessage, setToastMessage] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+    const [mtmDrawerOpen, setMtmDrawerOpen] = useState(false);
 
-    // 2. BULK ACTIONS HOOK
+    // 2. RULES HOOKS
+    const mtmRules = useMTMRules();
+
+    // 3. BULK ACTIONS HOOK
     const {
         selectedRenewals,
         confirmVariant,
@@ -59,9 +66,39 @@ export const LeaseRenewalsPage: React.FC = () => {
         }
     });
 
-    // 3. DERIVED DATA
+    // 4. DERIVED DATA
+    const ownerOptions = useMemo(() => {
+        const seen = new Set<string>();
+        return renewals
+            .filter(r => {
+                if (seen.has(r.owner.id)) return false;
+                seen.add(r.owner.id);
+                return true;
+            })
+            .map(r => ({
+                value: r.owner.id,
+                label: `${r.owner.firstName} ${r.owner.lastName}`,
+                email: r.owner.email,
+                portfolioId: r.property.portfolioId,
+            }));
+    }, [renewals]);
+
+    const renewalsWithResolvedMTM = useMemo(() =>
+        renewals.map(r => {
+            const resolved = mtmRules.resolveRuleForRenewal(
+                r.property.portfolioId,
+                r.owner.id
+            );
+            return {
+                ...r,
+                mtmPolicy: resolved.policy,
+                mtmPremiumPercent: resolved.premiumPercent,
+            };
+        }),
+        [renewals, mtmRules.config, mtmRules.resolveRuleForRenewal]);
+
     const filteredRenewals = useMemo(() => {
-        let data = filterRenewals(renewals, filters);
+        let data = filterRenewals(renewalsWithResolvedMTM, filters);
 
         // Tab-specific overrides
         if (activeTab === 'completed') {
@@ -71,7 +108,7 @@ export const LeaseRenewalsPage: React.FC = () => {
         }
 
         return data;
-    }, [renewals, filters, activeTab]);
+    }, [renewalsWithResolvedMTM, filters, activeTab]);
 
     const sortedRenewals = useMemo(() =>
         sortRenewals(filteredRenewals, sort), [filteredRenewals, sort]);
@@ -100,9 +137,9 @@ export const LeaseRenewalsPage: React.FC = () => {
                 value: r.property.portfolioId,
                 label: r.property.portfolioName
             }));
-    }, [renewals]);
+    }, [renewalsWithResolvedMTM]);
 
-    // 4. HANDLERS
+    // 5. HANDLERS
     const handleRenewalChange = useCallback((id: string, changes: Partial<LeaseRenewal>) => {
         setRenewals(prev => prev.map(r =>
             r.id === id ? { ...r, ...changes, isDirty: true } : r
@@ -288,9 +325,10 @@ export const LeaseRenewalsPage: React.FC = () => {
                     )}
 
                     {activeTab === 'settings' && (
-                        <div className="px-4 py-8 text-sm text-gray-400 text-center">
-                            MTM rules and renewal settings coming in Prompt 1.8
-                        </div>
+                        <RenewalSettingsTab
+                            onOpenMTMDrawer={() => setMtmDrawerOpen(true)}
+                            rulesHook={mtmRules}
+                        />
                     )}
                 </div>
             </AppShell>
@@ -382,6 +420,14 @@ export const LeaseRenewalsPage: React.FC = () => {
             `}>
                 {toastMessage.message}
             </div>
+
+            <MTMRulesDrawer
+                isOpen={mtmDrawerOpen}
+                onClose={() => setMtmDrawerOpen(false)}
+                rulesHook={mtmRules}
+                portfolioOptions={portfolioOptions}
+                ownerOptions={ownerOptions}
+            />
         </>
     );
 };
