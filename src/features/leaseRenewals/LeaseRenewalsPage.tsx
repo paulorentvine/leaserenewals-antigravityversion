@@ -1,14 +1,29 @@
 import React from 'react';
+import { AppShell } from '@/components/shell/AppShell';
 
 /**
  * Main dashboard container for the Lease Renewals feature.
- * TODO: Combine grid, filters, toolbar, and stat cards.
  */
 export const LeaseRenewalsPage: React.FC = () => {
     return (
-        <div style={{ padding: '20px', fontFamily: 'var(--font-sans)', color: 'var(--color-neutral)' }}>
-            <h1>Lease Renewals</h1>
-            <div>Lease Renewals Page — scaffold complete. UI coming in Prompt 1.2.</div>
-        </div>
+        <AppShell
+            pageTitleBarProps={{
+                title: 'Lease Renewals',
+                primaryAction: {
+                    label: 'Start Renewal Wave',
+                    icon: 'plus',
+                    onClick: () => console.log('Start Renewal Wave clicked'),
+                },
+                secondaryAction: {
+                    icon: 'ellipsis-vertical',
+                    onClick: () => console.log('More options clicked'),
+                    ariaLabel: 'More options',
+                },
+            }}
+        >
+            <div className="px-4 py-6 text-sm text-gray-400">
+                Shell complete — grid coming in Prompt 1.3
+            </div>
+        </AppShell>
     );
 };
