@@ -5,6 +5,9 @@ import { RenewalTabs } from './components/Tabs/RenewalTabs';
 import { FilterBar } from './components/FilterBar/FilterBar';
 import { GridToolbar } from './components/GridToolbar/GridToolbar';
 import { RenewalGrid } from './components/RenewalGrid/RenewalGrid';
+import { BulkActionToolbar } from './components/BulkActionToolbar/BulkActionToolbar';
+import { BulkConfirmModal } from './components/BulkActionToolbar/BulkConfirmModal';
+import { useBulkActions } from './hooks/useBulkActions';
 import type {
     LeaseRenewal,
     RenewalFilters,
@@ -33,7 +36,22 @@ export const LeaseRenewalsPage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [editingCellId, setEditingCellId] = useState<string | null>(null);
 
-    // 2. DERIVED DATA
+    // 2. BULK ACTIONS HOOK
+    const {
+        selectedRenewals,
+        confirmVariant,
+        confirmPayload,
+        handleAction,
+        handleConfirm,
+        handleCancelConfirm,
+    } = useBulkActions({
+        renewals,
+        selectedIds,
+        onRenewalsChange: (updated) => setRenewals(updated),
+        onSelectionChange: setSelectedIds,
+    });
+
+    // 3. DERIVED DATA
     const filteredRenewals = useMemo(() => {
         let data = filterRenewals(renewals, filters);
 
@@ -76,7 +94,7 @@ export const LeaseRenewalsPage: React.FC = () => {
             }));
     }, [renewals]);
 
-    // 3. HANDLERS
+    // 4. HANDLERS
     const handleRenewalChange = (id: string, changes: Partial<LeaseRenewal>) => {
         setRenewals(prev => prev.map(r =>
             r.id === id ? { ...r, ...changes, isDirty: true } : r
@@ -87,86 +105,106 @@ export const LeaseRenewalsPage: React.FC = () => {
         setFilters({ search: '', expiringWithin: 30 });
     };
 
-    // 4. RENDERING
+    // 5. RENDERING
     return (
-        <AppShell
-            pageTitleBarProps={{
-                title: 'Lease Renewals',
-                primaryAction: {
-                    label: 'Start Renewal Wave',
-                    icon: 'plus',
-                    onClick: () => console.log('Start Renewal Wave clicked'),
-                },
-                secondaryAction: {
-                    icon: 'ellipsis-vertical',
-                    onClick: () => console.log('More options clicked'),
-                    ariaLabel: 'More options',
-                },
-            }}
-        >
-            <div className="flex flex-col h-full bg-gray-50">
-                {/* Tab Strip */}
-                <RenewalTabs
-                    activeTab={activeTab}
-                    onChange={setActiveTab}
-                    counts={tabCounts}
-                />
+        <>
+            <AppShell
+                pageTitleBarProps={{
+                    title: 'Lease Renewals',
+                    primaryAction: {
+                        label: 'Start Renewal Wave',
+                        icon: 'plus',
+                        onClick: () => console.log('Start Renewal Wave clicked'),
+                    },
+                    secondaryAction: {
+                        icon: 'ellipsis-vertical',
+                        onClick: () => console.log('More options clicked'),
+                        ariaLabel: 'More options',
+                    },
+                }}
+            >
+                <div className="flex flex-col h-full bg-gray-50">
+                    {/* Tab Strip */}
+                    <RenewalTabs
+                        activeTab={activeTab}
+                        onChange={setActiveTab}
+                        counts={tabCounts}
+                    />
 
-                {/* Main Content Area */}
-                {(activeTab === 'active' || activeTab === 'completed') && (
-                    <div className="flex flex-col flex-1 overflow-hidden">
-                        <FilterBar
-                            filters={filters}
-                            onChange={setFilters}
-                            onReset={handleFiltersReset}
-                            onSaveView={() => console.log('Save view clicked')}
-                            portfolioOptions={portfolioOptions}
-                        />
-                        <GridToolbar
-                            totalCount={renewals.length}
-                            filteredCount={sortedRenewals.length}
-                            selectedCount={selectedIds.size}
-                            onEditColumns={() => console.log('Edit columns clicked')}
-                        />
-                        <RenewalGrid
-                            renewals={sortedRenewals}
-                            sort={sort}
-                            onSortChange={setSort}
-                            selectedIds={selectedIds}
-                            onSelectionChange={setSelectedIds}
-                            editingCellId={editingCellId}
-                            onCellEditStart={setEditingCellId}
-                            onCellEditEnd={() => setEditingCellId(null)}
-                            onRenewalChange={handleRenewalChange}
-                        />
-                    </div>
-                )}
-
-                {activeTab === 'pending_offers' && (
-                    <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                            <FileText className="w-8 h-8 text-gray-300" />
+                    {/* Main Content Area */}
+                    {(activeTab === 'active' || activeTab === 'completed') && (
+                        <div className="flex flex-col flex-1 overflow-hidden">
+                            <FilterBar
+                                filters={filters}
+                                onChange={setFilters}
+                                onReset={handleFiltersReset}
+                                onSaveView={() => console.log('Save view clicked')}
+                                portfolioOptions={portfolioOptions}
+                            />
+                            <GridToolbar
+                                totalCount={renewals.length}
+                                filteredCount={sortedRenewals.length}
+                                selectedCount={selectedIds.size}
+                                onEditColumns={() => console.log('Edit columns clicked')}
+                            />
+                            <RenewalGrid
+                                renewals={sortedRenewals}
+                                sort={sort}
+                                onSortChange={setSort}
+                                selectedIds={selectedIds}
+                                onSelectionChange={setSelectedIds}
+                                editingCellId={editingCellId}
+                                onCellEditStart={setEditingCellId}
+                                onCellEditEnd={() => setEditingCellId(null)}
+                                onRenewalChange={handleRenewalChange}
+                            />
                         </div>
-                        <p className="text-sm font-semibold text-gray-700">No pending offers</p>
-                        <p className="text-xs text-gray-400 mt-1 max-w-[260px]">
-                            Offers sent to tenants will appear here. Start by
-                            selecting renewals from the Active tab.
-                        </p>
-                        <button
-                            onClick={() => setActiveTab('active')}
-                            className="mt-4 text-sm font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors duration-150"
-                        >
-                            Go to Active Renewals →
-                        </button>
-                    </div>
-                )}
+                    )}
 
-                {activeTab === 'settings' && (
-                    <div className="px-4 py-8 text-sm text-gray-400 text-center">
-                        MTM rules and renewal settings coming in Prompt 1.8
-                    </div>
-                )}
-            </div>
-        </AppShell>
+                    {activeTab === 'pending_offers' && (
+                        <div className="flex flex-col items-center justify-center py-24 text-center">
+                            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                <FileText className="w-8 h-8 text-gray-300" />
+                            </div>
+                            <p className="text-sm font-semibold text-gray-700">No pending offers</p>
+                            <p className="text-xs text-gray-400 mt-1 max-w-[260px]">
+                                Offers sent to tenants will appear here. Start by
+                                selecting renewals from the Active tab.
+                            </p>
+                            <button
+                                onClick={() => setActiveTab('active')}
+                                className="mt-4 text-sm font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors duration-150"
+                            >
+                                Go to Active Renewals →
+                            </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="px-4 py-8 text-sm text-gray-400 text-center">
+                            MTM rules and renewal settings coming in Prompt 1.8
+                        </div>
+                    )}
+                </div>
+            </AppShell>
+
+            {/* Global Overlays */}
+            <BulkActionToolbar
+                selectedCount={selectedIds.size}
+                selectedRenewals={selectedRenewals}
+                onAction={handleAction}
+                onClearSelection={() => setSelectedIds(new Set())}
+            />
+
+            {confirmVariant && (
+                <BulkConfirmModal
+                    variant={confirmVariant}
+                    selectedCount={selectedRenewals.length}
+                    payload={confirmPayload}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancelConfirm}
+                />
+            )}
+        </>
     );
 };
