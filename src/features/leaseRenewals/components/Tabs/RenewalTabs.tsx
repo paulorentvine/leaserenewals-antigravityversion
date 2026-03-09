@@ -48,12 +48,12 @@ export const RenewalTabs: React.FC<RenewalTabsProps> = ({ activeTab, onChange, c
                         className={`
               flex items-center whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 -mb-px outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)]
               ${isActive
-                                ? 'text-neutral border-primary'
+                                ? 'text-neutral border-brand'
                                 : 'text-neutral-muted border-transparent hover:text-neutral'}
               ${tab.id === 'settings' ? 'px-2' : ''}
             `}
                     >
-                        {Icon && <Icon size={16} className={isActive ? 'text-gray-700' : 'text-gray-400'} />}
+                        {Icon && <Icon size={16} className={isActive ? 'text-neutral' : 'text-neutral-muted'} />}
 
                         {tab.label && (
                             <span>{tab.label}</span>
@@ -63,7 +63,7 @@ export const RenewalTabs: React.FC<RenewalTabsProps> = ({ activeTab, onChange, c
                             <span
                                 className={`
                   ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-medium transition-colors
-                  ${isActive ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}
+                  ${isActive ? 'bg-neutral text-white' : 'bg-gray-100 text-neutral-muted'}
                 `}
                             >
                                 {count}

@@ -85,24 +85,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`
           fixed inset-y-0 left-0 h-screen z-40 bg-[var(--sidebar-bg)] 
           transition-[width,transform] duration-200 ease-in-out overflow-hidden flex flex-col
-          ${collapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width-expanded)]'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
+                style={{
+                    width: collapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width-expanded)'
+                }}
             >
                 {/* Logo Area */}
                 <div
                     onClick={onToggle}
-                    className="h-[60px] flex items-center px-4 border-b border-white/10 shrink-0 cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors"
+                    className="h-[60px] flex items-center px-4 border-b border-white/10 shrink-0 cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors w-full"
                 >
-                    <div className="flex items-center gap-2">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                            <rect width="20" height="20" rx="4" y="2" fill="#00a54f" />
-                            <path d="M8 7h4l3 5-3 5H8l3-5-3-5z" fill="white" />
+                    <div className="flex items-center gap-1.5">
+                        <svg width="26" height="26" viewBox="0 0 100 100" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="10,65 45,30 45,65 10,100" fill="#00a54f" />
+                            <polygon points="45,0 80,35 80,70 45,35" fill="#00a54f" />
                         </svg>
                         <span
                             className={`
-                text-brand font-semibold text-sm tracking-tight transition-all duration-200 origin-left
-                ${collapsed ? 'opacity-0 scale-x-0 w-0' : 'opacity-100 scale-x-100 w-auto ml-2'}
+                text-[#D1D5DB] font-medium text-[22px] tracking-tight transition-all duration-200 origin-left
+                ${collapsed ? 'opacity-0 scale-x-0 w-0' : 'opacity-100 scale-x-100 w-auto ml-1'}
               `}
                         >
                             rentvine
